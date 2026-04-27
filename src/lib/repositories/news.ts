@@ -1,0 +1,41 @@
+import { createClient } from "@/lib/supabase/server";
+
+export interface NewsItem {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  body_md: string | null;
+  cover_image_url: string | null;
+  published_at: string | null;
+}
+
+export async function getAllNews(): Promise<NewsItem[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("news")
+      .select("slug, title, excerpt, body_md, cover_image_url, published_at")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false, nullsFirst: false });
+    if (error || !data) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+export async function getNewsBySlug(slug: string): Promise<NewsItem | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("news")
+      .select("slug, title, excerpt, body_md, cover_image_url, published_at")
+      .eq("slug", slug)
+      .eq("is_published", true)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
