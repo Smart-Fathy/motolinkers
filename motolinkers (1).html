@@ -1,0 +1,1920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>MotoLinkers — Transparency is the new luxury.</title>
+<meta name="description" content="Egypt's EV import consultancy. Factory-direct from China & the UAE to Alexandria. Data-driven, transparent, quietly luxurious." />
+
+<!-- Fonts: distinctive pairing — Fraunces (editorial serif) + Geist (modern sans) + Geist Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Geist:wght@300..900&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet" />
+
+<!-- GSAP + ScrollTrigger -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/SplitText.min.js"></script>
+
+<style>
+/* =======================================================================
+   DESIGN TOKENS
+======================================================================= */
+:root{
+  /* Core palette */
+  --ink: #0A0A0B;
+  --ink-2: #111113;
+  --ink-3: #1A1A1E;
+  --mist: #26262B;
+  --steel: #6F7078;
+  --stone: #9A9B9F;
+
+  --bone: #EEE8DC;
+  --paper: #F5F0E5;
+  --paper-warm: #EDE5D3;
+
+  --volt: #C8FF2E;       /* signature electric accent */
+  --volt-dim: #95C219;
+  --ember: #E8743C;      /* Egyptian sunset hint */
+  --rust: #B8411C;
+
+  /* Semantic */
+  --bg: var(--ink);
+  --fg: var(--bone);
+  --muted: var(--stone);
+  --line: rgba(238,232,220,.14);
+  --line-strong: rgba(238,232,220,.28);
+
+  /* Type */
+  --ff-display: "Fraunces", "Times New Roman", serif;
+  --ff-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ff-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+
+  /* Spacing */
+  --sp-section: clamp(5rem, 12vw, 9rem);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-mech: cubic-bezier(0.83, 0, 0.17, 1);
+
+  /* Layers */
+  --z-nav: 50;
+  --z-cursor: 9999;
+  --z-grain: 9998;
+  --z-loader: 9997;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--ff-sans);
+  font-size:16px;
+  font-weight:400;
+  line-height:1.5;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+img{max-width:100%;display:block}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--volt);color:var(--ink)}
+
+/* =======================================================================
+   GRAIN — subtle film grain over entire page for tactile luxury
+======================================================================= */
+.grain{
+  position:fixed;inset:0;z-index:var(--z-grain);pointer-events:none;opacity:.08;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* =======================================================================
+   CUSTOM CURSOR (desktop only)
+======================================================================= */
+.cursor, .cursor-dot{
+  position:fixed;top:0;left:0;pointer-events:none;z-index:var(--z-cursor);
+  border-radius:50%;transform:translate(-50%,-50%);will-change:transform;
+  transition:width .28s var(--ease-out), height .28s var(--ease-out),
+             background-color .2s ease, border-color .2s ease, opacity .2s;
+}
+.cursor{width:36px;height:36px;border:1px solid var(--bone);mix-blend-mode:difference}
+.cursor-dot{width:5px;height:5px;background:var(--bone);mix-blend-mode:difference}
+.cursor.is-hovering{width:72px;height:72px;border-color:var(--volt);background:rgba(200,255,46,.08)}
+.cursor.is-hovering + .cursor-dot, body.is-hovering .cursor-dot{opacity:0}
+@media (hover:none) or (max-width: 900px){.cursor,.cursor-dot{display:none}}
+
+/* =======================================================================
+   LOADER
+======================================================================= */
+.loader{
+  position:fixed;inset:0;z-index:var(--z-loader);background:var(--ink);
+  display:flex;align-items:flex-end;justify-content:space-between;
+  padding:2rem clamp(1rem,4vw,3rem);
+}
+.loader__mark{font-family:var(--ff-display);font-size:clamp(3rem,14vw,8rem);
+  font-weight:300;font-variation-settings:"SOFT" 100, "opsz" 144;letter-spacing:-.04em;line-height:.9}
+.loader__mark em{font-style:italic;color:var(--volt);font-variation-settings:"SOFT" 100, "opsz" 144, "WONK" 1}
+.loader__pct{font-family:var(--ff-mono);font-size:1rem;letter-spacing:.02em;color:var(--bone)}
+.loader__bar{
+  position:fixed;left:0;bottom:0;height:2px;width:100%;background:transparent;
+  transform-origin:left;transform:scaleX(0);z-index:var(--z-loader);
+  background:linear-gradient(90deg,var(--volt),var(--volt) 60%,transparent)
+}
+
+/* =======================================================================
+   NAV
+======================================================================= */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:var(--z-nav);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.25rem clamp(1rem,4vw,3rem);
+  transition:background .4s var(--ease-out), backdrop-filter .4s, padding .4s;
+}
+.nav.is-scrolled{
+  background:rgba(10,10,11,.72);
+  backdrop-filter:blur(18px) saturate(140%);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  border-bottom:1px solid var(--line);
+  padding-top:.85rem;padding-bottom:.85rem;
+}
+.nav__logo{
+  display:flex;align-items:baseline;gap:.55rem;font-family:var(--ff-display);
+  font-weight:400;font-size:1.35rem;letter-spacing:-.02em;
+  font-variation-settings:"opsz" 144, "SOFT" 100;
+}
+.nav__logo em{font-style:italic;color:var(--volt);font-variation-settings:"opsz" 144, "WONK" 1}
+.nav__logo-mark{
+  width:28px;height:28px;border-radius:50%;
+  background:conic-gradient(from 180deg, var(--volt), var(--bone), var(--volt));
+  position:relative;overflow:hidden;
+}
+.nav__logo-mark::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--ink)}
+.nav__links{display:flex;gap:2rem;align-items:center}
+.nav__link{
+  font-size:.86rem;letter-spacing:.02em;font-weight:400;color:var(--bone);
+  position:relative;padding:.4rem 0;opacity:.7;transition:opacity .25s;
+}
+.nav__link:hover{opacity:1}
+.nav__link::after{
+  content:"";position:absolute;left:0;bottom:0;height:1px;width:100%;
+  background:var(--volt);transform:scaleX(0);transform-origin:right;
+  transition:transform .5s var(--ease-out);
+}
+.nav__link:hover::after{transform:scaleX(1);transform-origin:left}
+.nav__cta{
+  display:inline-flex;align-items:center;gap:.5rem;
+  padding:.7rem 1.2rem;border-radius:999px;
+  background:var(--bone);color:var(--ink);font-weight:500;font-size:.85rem;
+  letter-spacing:.01em;transition:background .3s, color .3s, transform .3s;
+}
+.nav__cta:hover{background:var(--volt);transform:translateY(-1px)}
+.nav__cta svg{transition:transform .3s var(--ease-out)}
+.nav__cta:hover svg{transform:translateX(3px)}
+.nav__menu{display:none}
+@media (max-width: 900px){
+  .nav__links, .nav__cta{display:none}
+  .nav__menu{
+    display:flex;flex-direction:column;gap:5px;padding:.6rem;
+    border:1px solid var(--line-strong);border-radius:999px;
+  }
+  .nav__menu span{display:block;width:22px;height:1.5px;background:var(--bone)}
+}
+
+/* Mobile menu panel */
+.menu-panel{
+  position:fixed;inset:0;z-index:55;background:var(--ink);
+  transform:translateY(-100%);transition:transform .6s var(--ease-out);
+  display:flex;flex-direction:column;padding:5rem 1.5rem 2rem;
+}
+.menu-panel.is-open{transform:translateY(0)}
+.menu-panel__close{
+  position:absolute;top:1.4rem;right:1.4rem;
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;
+}
+.menu-panel__list{display:flex;flex-direction:column;gap:1rem;margin-top:1.5rem}
+.menu-panel__list a{
+  font-family:var(--ff-display);font-size:clamp(2.2rem,11vw,4rem);
+  font-weight:300;font-variation-settings:"opsz" 144, "SOFT" 50;
+  letter-spacing:-.03em;line-height:1;
+  padding:.6rem 0;border-bottom:1px solid var(--line);
+}
+.menu-panel__list a em{font-style:italic;color:var(--volt)}
+
+/* =======================================================================
+   LAYOUT
+======================================================================= */
+.wrap{max-width:1440px;margin-inline:auto;padding-inline:clamp(1rem,4vw,3rem)}
+section{position:relative}
+
+/* =======================================================================
+   HERO
+======================================================================= */
+.hero{
+  position:relative;min-height:100svh;min-height:100vh;
+  padding:8rem clamp(1rem,4vw,3rem) 3rem;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  overflow:hidden;isolation:isolate;
+}
+.hero__bg{
+  position:absolute;inset:0;z-index:-2;
+  background:
+    radial-gradient(1200px 600px at 70% 30%, rgba(200,255,46,.09), transparent 60%),
+    radial-gradient(800px 500px at 20% 80%, rgba(232,116,60,.10), transparent 70%),
+    linear-gradient(180deg, #07070A 0%, #0A0A0B 60%, #0E0E11 100%);
+}
+.hero__mesh{
+  position:absolute;inset:0;z-index:-1;opacity:.55;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(200,255,46,.12) 0%, transparent 35%),
+    radial-gradient(circle at 85% 70%, rgba(120,200,255,.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(232,116,60,.06) 0%, transparent 50%);
+  filter:blur(40px);
+}
+.hero__grid{
+  position:absolute;inset:0;z-index:-1;opacity:.06;
+  background-image:
+    linear-gradient(var(--bone) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bone) 1px, transparent 1px);
+  background-size:80px 80px;
+  mask-image:radial-gradient(ellipse at center, black 20%, transparent 80%);
+}
+
+.hero__meta{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:2rem;
+  padding-bottom:3rem;border-bottom:1px solid var(--line);margin-bottom:3rem;
+  font-family:var(--ff-mono);font-size:.74rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--stone);
+}
+.hero__meta-item{display:flex;flex-direction:column;gap:.35rem}
+.hero__meta-item strong{color:var(--bone);font-weight:500;letter-spacing:.05em}
+.hero__meta-item .dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--volt);
+  margin-right:.5rem;vertical-align:middle;animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+
+.hero__title{
+  font-family:var(--ff-display);
+  font-size:clamp(3.5rem, 13vw, 11.5rem);
+  line-height:.88;letter-spacing:-.04em;
+  font-weight:300;
+  font-variation-settings:"opsz" 144, "SOFT" 50;
+  color:var(--bone);
+  margin:0;
+  max-width:14ch;
+}
+.hero__title .line{display:block;overflow:hidden;padding-bottom:.04em}
+.hero__title .line > span{display:inline-block;transform:translateY(110%)}
+.hero__title em{
+  font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1;
+  position:relative;
+}
+.hero__title .strike{text-decoration:line-through;text-decoration-thickness:2px;color:var(--stone);font-style:normal}
+
+.hero__foot{
+  display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:end;
+  margin-top:clamp(2rem,5vw,4rem);
+}
+.hero__lede{
+  max-width:32ch;font-size:clamp(1rem,1.25vw,1.15rem);line-height:1.55;
+  color:var(--bone);opacity:.75;
+}
+.hero__lede em{color:var(--volt);font-style:normal;font-family:var(--ff-display);
+  font-variation-settings:"opsz" 14, "SOFT" 100}
+.hero__ctas{display:flex;gap:.8rem;flex-wrap:wrap}
+
+.btn{
+  display:inline-flex;align-items:center;gap:.7rem;
+  padding:1rem 1.5rem;border-radius:999px;
+  font-size:.92rem;font-weight:500;letter-spacing:.01em;
+  transition:transform .3s, background .3s, color .3s, border-color .3s;
+  cursor:pointer;white-space:nowrap;
+}
+.btn--primary{background:var(--volt);color:var(--ink)}
+.btn--primary:hover{background:var(--bone);transform:translateY(-2px)}
+.btn--ghost{border:1px solid var(--line-strong);color:var(--bone)}
+.btn--ghost:hover{border-color:var(--bone);background:rgba(238,232,220,.06);transform:translateY(-2px)}
+.btn svg{transition:transform .3s var(--ease-out)}
+.btn:hover svg{transform:translate(3px,-3px)}
+
+.hero__scroll{
+  position:absolute;left:50%;bottom:1.5rem;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:.6rem;
+  font-family:var(--ff-mono);font-size:.7rem;letter-spacing:.25em;
+  text-transform:uppercase;color:var(--stone);opacity:.7;
+}
+.hero__scroll-line{
+  width:1px;height:40px;background:linear-gradient(var(--volt),transparent);
+  animation:scrollLine 2.2s infinite var(--ease-out);
+}
+@keyframes scrollLine{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* Hero corner numeric ticker */
+.hero__ticker{
+  position:absolute;right:clamp(1rem,4vw,3rem);top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:1rem;align-items:flex-end;
+  font-family:var(--ff-mono);font-size:.7rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--stone);opacity:.8;
+}
+.hero__ticker strong{color:var(--bone);font-weight:500;font-size:.78rem}
+.hero__ticker span{display:block}
+@media (max-width: 900px){.hero__ticker{display:none}}
+
+/* =======================================================================
+   MARQUEE
+======================================================================= */
+.marquee{
+  padding:2rem 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:var(--ink-2);overflow:hidden;
+}
+.marquee__track{
+  display:flex;gap:4rem;white-space:nowrap;
+  animation:scroll-x 35s linear infinite;
+  width:max-content;
+}
+.marquee__item{
+  display:inline-flex;align-items:center;gap:1rem;
+  font-family:var(--ff-display);font-size:clamp(1.8rem,4vw,3.2rem);
+  font-weight:300;font-variation-settings:"opsz" 144, "SOFT" 80;
+  letter-spacing:-.02em;color:var(--bone);
+}
+.marquee__item em{font-style:italic;color:var(--volt);font-variation-settings:"opsz" 144, "WONK" 1}
+.marquee__dot{width:10px;height:10px;border-radius:50%;background:var(--volt);flex-shrink:0}
+@keyframes scroll-x{to{transform:translateX(-50%)}}
+
+/* =======================================================================
+   MANIFESTO
+======================================================================= */
+.manifesto{padding:var(--sp-section) 0;background:var(--ink)}
+.manifesto__grid{
+  display:grid;grid-template-columns:1fr 1.5fr;gap:clamp(2rem,6vw,6rem);align-items:start;
+}
+@media (max-width:900px){.manifesto__grid{grid-template-columns:1fr}}
+.label{
+  font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--volt);
+  display:inline-flex;align-items:center;gap:.5rem;margin-bottom:1.5rem;
+}
+.label::before{content:"";width:24px;height:1px;background:var(--volt)}
+
+.manifesto__kicker{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--stone);margin-bottom:2rem}
+.manifesto__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);margin:0;
+}
+.manifesto__title em{font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.manifesto__body{
+  font-size:clamp(1.05rem,1.15vw,1.2rem);line-height:1.55;
+  color:var(--bone);opacity:.8;max-width:48ch;
+}
+.manifesto__body p{margin:0 0 1.1em}
+.manifesto__body strong{color:var(--volt);font-weight:500}
+
+.pillars{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem;
+}
+@media (max-width:700px){.pillars{grid-template-columns:1fr}}
+.pillar{
+  padding:1.8rem;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(180deg, rgba(238,232,220,.02), transparent);
+  transition:border-color .4s, transform .4s, background .4s;
+}
+.pillar:hover{border-color:var(--volt);transform:translateY(-4px);
+  background:linear-gradient(180deg, rgba(200,255,46,.04), transparent)}
+.pillar__num{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.2em;
+  color:var(--volt);margin-bottom:2rem}
+.pillar__title{font-family:var(--ff-display);font-weight:400;
+  font-size:1.35rem;margin-bottom:.6rem;color:var(--bone);
+  font-variation-settings:"opsz" 24, "SOFT" 50}
+.pillar__text{font-size:.92rem;line-height:1.55;color:var(--stone);margin:0}
+
+/* =======================================================================
+   FLEET
+======================================================================= */
+.fleet{padding:var(--sp-section) 0;background:var(--paper);color:var(--ink)}
+.fleet .label{color:var(--rust)}
+.fleet .label::before{background:var(--rust)}
+.fleet__head{
+  display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:end;
+  margin-bottom:4rem;
+}
+@media (max-width:700px){.fleet__head{grid-template-columns:1fr}}
+.fleet__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--ink);margin:0;
+}
+.fleet__title em{font-style:italic;
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.fleet__sub{max-width:36ch;color:var(--ink);opacity:.65;font-size:1rem;line-height:1.5;margin:0}
+
+.fleet__filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2.5rem}
+.chip{
+  padding:.6rem 1.1rem;border-radius:999px;border:1px solid rgba(10,10,11,.2);
+  font-size:.82rem;font-weight:500;letter-spacing:.01em;color:var(--ink);
+  background:transparent;transition:all .3s;
+}
+.chip:hover{border-color:var(--ink)}
+.chip.is-active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+.fleet__grid{
+  display:grid;grid-template-columns:repeat(12,1fr);gap:1.5rem;
+}
+.car{
+  grid-column:span 4;
+  position:relative;background:var(--bone);border-radius:18px;overflow:hidden;
+  transition:transform .5s var(--ease-out), box-shadow .5s;
+  cursor:pointer;isolation:isolate;
+}
+.car:nth-child(4n+1){grid-column:span 6}
+.car:nth-child(7){grid-column:span 6}
+@media (max-width: 1000px){.car, .car:nth-child(4n+1), .car:nth-child(7){grid-column:span 6}}
+@media (max-width: 640px){.car, .car:nth-child(4n+1), .car:nth-child(7){grid-column:span 12}}
+
+.car:hover{transform:translateY(-6px);box-shadow:0 30px 60px -20px rgba(10,10,11,.25)}
+.car__img{
+  aspect-ratio:16/10;width:100%;background-size:cover;background-position:center;
+  transition:transform .8s var(--ease-out);
+}
+.car:hover .car__img{transform:scale(1.04)}
+.car__badge{
+  position:absolute;top:1.2rem;left:1.2rem;z-index:2;
+  display:inline-flex;align-items:center;gap:.4rem;
+  padding:.4rem .75rem;border-radius:999px;background:rgba(10,10,11,.82);
+  backdrop-filter:blur(10px);color:var(--bone);
+  font-family:var(--ff-mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+}
+.car__badge .flag{width:8px;height:8px;border-radius:50%;background:var(--volt)}
+.car__badge--cn .flag{background:#E4002B}
+.car__badge--ae .flag{background:#00732F}
+
+.car__body{padding:1.5rem 1.5rem 1.6rem}
+.car__title{
+  font-family:var(--ff-display);font-weight:400;font-size:1.25rem;
+  line-height:1.15;color:var(--ink);margin:0 0 .4rem;letter-spacing:-.01em;
+  font-variation-settings:"opsz" 24, "SOFT" 50;
+}
+.car__specs{
+  display:flex;gap:.9rem;font-family:var(--ff-mono);font-size:.7rem;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--ink);opacity:.55;
+  margin-bottom:1.1rem;flex-wrap:wrap;
+}
+.car__specs span{display:inline-flex;align-items:center;gap:.35rem}
+.car__specs span::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--ink);opacity:.4}
+.car__price-row{
+  display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  padding-top:1rem;border-top:1px solid rgba(10,10,11,.1);
+}
+.car__price{
+  font-family:var(--ff-display);font-weight:500;font-size:1.25rem;
+  letter-spacing:-.01em;color:var(--ink);
+  font-variation-settings:"opsz" 24, "SOFT" 50;
+}
+.car__price small{font-family:var(--ff-mono);font-weight:400;font-size:.68rem;
+  letter-spacing:.1em;color:var(--stone);margin-left:.35rem;text-transform:uppercase}
+.car__link{
+  display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:500;color:var(--ink);
+  opacity:.8;transition:opacity .3s, gap .3s;
+}
+.car:hover .car__link{opacity:1;gap:.6rem}
+
+/* =======================================================================
+   CALCULATOR
+======================================================================= */
+.calc{padding:var(--sp-section) 0;background:var(--ink);color:var(--bone);position:relative;overflow:hidden}
+.calc__bg{
+  position:absolute;inset:0;z-index:0;opacity:.5;
+  background:
+    radial-gradient(600px 400px at 90% 10%, rgba(200,255,46,.08), transparent 70%),
+    radial-gradient(500px 400px at 10% 90%, rgba(232,116,60,.06), transparent 70%);
+}
+.calc .wrap{position:relative;z-index:1}
+.calc__head{
+  display:grid;grid-template-columns:1fr 1fr;gap:4rem;margin-bottom:4rem;align-items:end;
+}
+@media (max-width:900px){.calc__head{grid-template-columns:1fr;gap:2rem}}
+.calc__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0;
+}
+.calc__title em{font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.calc__sub{max-width:42ch;color:var(--bone);opacity:.7;font-size:1rem;line-height:1.55}
+
+.calc__shell{
+  background:rgba(238,232,220,.03);border:1px solid var(--line);
+  border-radius:24px;padding:clamp(1.5rem,3vw,2.5rem);
+  backdrop-filter:blur(12px);
+}
+
+/* Calc steps indicator */
+.steps{
+  display:flex;gap:1rem;margin-bottom:2.5rem;flex-wrap:wrap;
+  padding-bottom:1.5rem;border-bottom:1px solid var(--line);
+}
+.step-pill{
+  display:inline-flex;align-items:center;gap:.55rem;
+  padding:.45rem .9rem;border-radius:999px;border:1px solid var(--line);
+  font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--stone);transition:all .4s;
+}
+.step-pill .n{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;border:1px solid var(--line-strong);
+  font-size:.7rem;font-weight:500;color:var(--stone);
+}
+.step-pill.is-active{color:var(--volt);border-color:var(--volt)}
+.step-pill.is-active .n{background:var(--volt);color:var(--ink);border-color:var(--volt)}
+.step-pill.is-done{color:var(--bone);border-color:var(--line-strong)}
+.step-pill.is-done .n{background:var(--bone);color:var(--ink);border-color:var(--bone)}
+
+.step-panel{display:none}
+.step-panel.is-active{display:block;animation:fadeUp .5s var(--ease-out)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.step-panel h3{
+  font-family:var(--ff-display);font-weight:400;font-size:clamp(1.5rem,2.5vw,2.2rem);
+  margin:0 0 .5rem;color:var(--bone);letter-spacing:-.02em;
+  font-variation-settings:"opsz" 48, "SOFT" 50;
+}
+.step-panel .hint{color:var(--stone);font-size:.92rem;margin:0 0 1.8rem}
+
+.field{margin-bottom:1.1rem}
+.field label{
+  display:block;font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--stone);margin-bottom:.55rem;
+}
+.field input{
+  width:100%;padding:1rem 1.1rem;border-radius:12px;
+  background:rgba(238,232,220,.04);border:1px solid var(--line);
+  color:var(--bone);font-size:1rem;font-family:var(--ff-sans);
+  transition:border-color .3s, background .3s;
+}
+.field input:focus{outline:none;border-color:var(--volt);background:rgba(200,255,46,.04)}
+.field input::placeholder{color:var(--stone);opacity:.6}
+
+.choices{display:grid;grid-template-columns:repeat(auto-fit, minmax(180px,1fr));gap:.85rem}
+.choice{
+  padding:1.4rem 1.2rem;border-radius:14px;border:1px solid var(--line);
+  background:rgba(238,232,220,.02);cursor:pointer;
+  transition:all .35s;text-align:left;display:flex;flex-direction:column;gap:.4rem;
+}
+.choice:hover{border-color:var(--line-strong);background:rgba(238,232,220,.04)}
+.choice.is-selected{border-color:var(--volt);background:rgba(200,255,46,.06)}
+.choice__icon{font-size:1.6rem;margin-bottom:.3rem}
+.choice__title{font-weight:500;font-size:1rem;color:var(--bone)}
+.choice__meta{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.05em;
+  color:var(--stone);text-transform:none}
+.choice__meta strong{color:var(--volt);font-weight:500}
+
+.calc__actions{
+  display:flex;justify-content:space-between;gap:1rem;margin-top:2rem;
+  padding-top:1.5rem;border-top:1px solid var(--line);
+}
+
+/* Results */
+.results{display:grid;grid-template-columns:1.2fr 1fr;gap:2rem}
+@media (max-width:800px){.results{grid-template-columns:1fr}}
+.results__total{
+  padding:2rem;border-radius:16px;background:var(--volt);color:var(--ink);
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.results__total-label{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.1em;
+  text-transform:uppercase;opacity:.7;margin-bottom:.5rem}
+.results__total-value{
+  font-family:var(--ff-display);font-weight:500;font-size:clamp(2rem,5vw,3.5rem);
+  line-height:1;letter-spacing:-.03em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;
+}
+.results__total-sub{margin-top:.5rem;font-size:.9rem;opacity:.8}
+.results__total-conversion{
+  margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid rgba(10,10,11,.2);
+  font-family:var(--ff-mono);font-size:.82rem;letter-spacing:.02em;
+}
+.breakdown{display:flex;flex-direction:column}
+.breakdown__row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:1rem 0;border-bottom:1px dashed var(--line);
+}
+.breakdown__row:last-child{border-bottom:none}
+.breakdown__row .l{color:var(--stone);font-size:.88rem}
+.breakdown__row .v{font-family:var(--ff-mono);color:var(--bone);font-size:.95rem;font-weight:500}
+.breakdown__row.total .l{color:var(--bone);font-weight:500}
+.breakdown__row.total .v{color:var(--volt);font-size:1.1rem}
+
+/* =======================================================================
+   ROUTES
+======================================================================= */
+.routes{padding:var(--sp-section) 0;background:var(--paper);color:var(--ink);position:relative}
+.routes .label{color:var(--rust)}
+.routes .label::before{background:var(--rust)}
+.routes__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--ink);margin:0 0 3rem;max-width:18ch;
+}
+.routes__title em{font-style:italic;
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.routes__grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:2rem;
+}
+@media (max-width:900px){.routes__grid{grid-template-columns:1fr}}
+
+.route{
+  padding:2rem;border-radius:22px;border:1px solid rgba(10,10,11,.12);
+  background:var(--bone);position:relative;overflow:hidden;
+  transition:transform .5s var(--ease-out), box-shadow .5s;
+}
+.route:hover{transform:translateY(-4px);box-shadow:0 30px 60px -20px rgba(10,10,11,.25)}
+.route__head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;gap:1rem}
+.route__from-to{
+  display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;
+  font-family:var(--ff-display);font-weight:400;font-size:clamp(1.3rem,2.2vw,1.8rem);
+  color:var(--ink);letter-spacing:-.015em;
+  font-variation-settings:"opsz" 48, "SOFT" 50;
+}
+.route__arrow{color:var(--rust);font-size:1.3em;line-height:1}
+.route__flag{
+  display:inline-block;width:34px;height:24px;border-radius:3px;
+  background-size:cover;background-position:center;flex-shrink:0;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+}
+.route__flag--cn{background:linear-gradient(#DE2910, #DE2910);position:relative}
+.route__flag--cn::after{content:"★";color:#FFDE00;position:absolute;left:4px;top:1px;font-size:.9rem;line-height:1}
+.route__flag--ae{background:linear-gradient(to bottom,#00732F 0 33%,#FFF 33% 66%,#000 66%);position:relative}
+.route__flag--ae::before{content:"";position:absolute;left:0;top:0;bottom:0;width:25%;background:#FF0000}
+.route__flag--eg{background:linear-gradient(to bottom,#CE1126 0 33%,#FFF 33% 66%,#000 66%)}
+
+.route__number{
+  font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink);opacity:.5;
+}
+
+.route__map{
+  position:relative;height:170px;margin:1.5rem 0;
+  display:flex;align-items:center;
+}
+.route__map svg{width:100%;height:100%;overflow:visible}
+
+.route__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding-top:1.5rem;border-top:1px solid rgba(10,10,11,.1)}
+.route__stat-label{font-family:var(--ff-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);opacity:.5;margin-bottom:.3rem}
+.route__stat-value{font-family:var(--ff-display);font-weight:500;font-size:clamp(1.3rem,2vw,1.7rem);letter-spacing:-.02em;color:var(--ink);
+  font-variation-settings:"opsz" 24, "SOFT" 50}
+.route__stat-value em{font-style:italic;color:var(--rust);
+  font-variation-settings:"opsz" 24, "SOFT" 100, "WONK" 1}
+
+/* =======================================================================
+   HOW IT WORKS — process
+======================================================================= */
+.process{padding:var(--sp-section) 0;background:var(--ink);color:var(--bone);position:relative}
+.process__head{margin-bottom:5rem;max-width:26ch}
+.process__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0 0 1.2rem;
+}
+.process__title em{font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+
+.process__rail{
+  position:relative;padding-left:0;
+  display:grid;grid-template-columns:repeat(4, 1fr);gap:1.5rem;
+}
+@media (max-width:900px){.process__rail{grid-template-columns:1fr}}
+.process__line{
+  position:absolute;top:48px;left:0;right:0;height:1px;background:var(--line);z-index:0;
+}
+@media (max-width:900px){.process__line{display:none}}
+.process__line-fill{
+  position:absolute;top:48px;left:0;height:1px;background:var(--volt);z-index:1;width:0;
+  box-shadow:0 0 16px var(--volt);
+}
+.step-card{position:relative;z-index:2;padding:2rem 0}
+.step-card__num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:56px;height:56px;border-radius:50%;
+  background:var(--ink);border:1px solid var(--line-strong);
+  font-family:var(--ff-display);font-weight:500;font-size:1.5rem;
+  color:var(--bone);margin-bottom:1.5rem;transition:all .5s;
+  font-variation-settings:"opsz" 24, "SOFT" 50, "WONK" 1;font-style:italic;
+}
+.step-card.is-active .step-card__num{background:var(--volt);color:var(--ink);border-color:var(--volt)}
+.step-card__title{
+  font-family:var(--ff-display);font-weight:400;font-size:clamp(1.15rem,1.6vw,1.5rem);
+  color:var(--bone);margin:0 0 .6rem;letter-spacing:-.01em;
+  font-variation-settings:"opsz" 24, "SOFT" 50;
+}
+.step-card__text{font-size:.92rem;line-height:1.6;color:var(--stone);margin:0}
+
+/* =======================================================================
+   TESTIMONIALS
+======================================================================= */
+.words{padding:var(--sp-section) 0;background:var(--paper);color:var(--ink)}
+.words .label{color:var(--rust)}
+.words .label::before{background:var(--rust)}
+.words__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0 0 4rem;max-width:20ch;
+}
+.words__title em{font-style:italic;
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+
+.words__grid{
+  columns:2 320px;column-gap:1.5rem;
+}
+.quote{
+  break-inside:avoid;padding:1.8rem;border-radius:18px;
+  background:var(--bone);margin-bottom:1.5rem;border:1px solid rgba(10,10,11,.08);
+  transition:transform .4s, border-color .4s;
+}
+.quote:hover{transform:translateY(-4px);border-color:rgba(10,10,11,.2)}
+.quote__mark{
+  font-family:var(--ff-display);font-style:italic;font-weight:400;
+  color:var(--rust);font-size:3rem;line-height:.5;margin-bottom:.8rem;
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1;
+}
+.quote__text{
+  font-family:var(--ff-display);font-weight:300;font-size:clamp(1.1rem,1.4vw,1.35rem);
+  line-height:1.35;letter-spacing:-.01em;color:var(--ink);margin:0 0 1.4rem;
+  font-variation-settings:"opsz" 32, "SOFT" 50;
+}
+.quote__by{display:flex;align-items:center;gap:.8rem;padding-top:1rem;border-top:1px solid rgba(10,10,11,.1)}
+.quote__avatar{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg, var(--rust), var(--ember));
+  display:flex;align-items:center;justify-content:center;
+  color:var(--bone);font-weight:500;font-size:.88rem;letter-spacing:.02em;
+}
+.quote__who{display:flex;flex-direction:column}
+.quote__name{font-weight:500;font-size:.95rem;color:var(--ink)}
+.quote__role{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.04em;color:var(--ink);opacity:.55;text-transform:uppercase}
+
+/* =======================================================================
+   STATS
+======================================================================= */
+.stats{padding:var(--sp-section) 0;background:var(--ink);color:var(--bone);overflow:hidden}
+.stats__grid{
+  display:grid;grid-template-columns:repeat(4, 1fr);gap:0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+}
+@media (max-width:900px){.stats__grid{grid-template-columns:repeat(2,1fr)}}
+.stat{
+  padding:2.5rem 1.5rem;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;gap:.5rem;
+  transition:background .4s;
+}
+.stat:last-child{border-right:none}
+@media (max-width:900px){
+  .stat:nth-child(2){border-right:none}
+  .stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
+}
+.stat:hover{background:rgba(200,255,46,.03)}
+.stat__value{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.5rem,5.5vw,4.5rem);line-height:1;letter-spacing:-.04em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);
+}
+.stat__value em{font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.stat__label{
+  font-family:var(--ff-mono);font-size:.74rem;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--stone);
+}
+
+/* =======================================================================
+   CTA
+======================================================================= */
+.cta{
+  padding:var(--sp-section) 0;background:var(--ink);color:var(--bone);position:relative;overflow:hidden;
+}
+.cta__inner{
+  position:relative;padding:clamp(3rem,8vw,6rem) clamp(1.5rem,5vw,4rem);
+  border-radius:28px;
+  background:
+    radial-gradient(600px 400px at 80% 20%, rgba(200,255,46,.18), transparent 60%),
+    radial-gradient(500px 400px at 20% 90%, rgba(232,116,60,.14), transparent 70%),
+    linear-gradient(180deg, #111114, #0A0A0B);
+  border:1px solid var(--line);overflow:hidden;
+}
+.cta__inner::before{
+  content:"";position:absolute;inset:0;opacity:.08;
+  background-image:linear-gradient(var(--bone) 1px, transparent 1px),
+                   linear-gradient(90deg, var(--bone) 1px, transparent 1px);
+  background-size:40px 40px;
+  mask-image:radial-gradient(ellipse at center, black, transparent 70%);
+  pointer-events:none;
+}
+.cta__title{
+  font-family:var(--ff-display);font-weight:300;
+  font-size:clamp(2.6rem,6.5vw,6rem);line-height:.9;letter-spacing:-.04em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0 0 2rem;max-width:16ch;position:relative;
+}
+.cta__title em{font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
+.cta__body{max-width:48ch;color:var(--bone);opacity:.75;font-size:1.05rem;line-height:1.55;margin:0 0 2.2rem;position:relative}
+.cta__ctas{display:flex;gap:.8rem;flex-wrap:wrap;position:relative}
+
+/* =======================================================================
+   FOOTER
+======================================================================= */
+.foot{padding:3rem 0 2rem;background:var(--ink-2);color:var(--bone)}
+.foot__top{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:2rem;
+  padding-bottom:3rem;border-bottom:1px solid var(--line);margin-bottom:2rem;
+}
+@media (max-width:900px){.foot__top{grid-template-columns:1fr 1fr;gap:2.5rem}}
+@media (max-width:560px){.foot__top{grid-template-columns:1fr}}
+.foot__brand{display:flex;flex-direction:column;gap:1.2rem;max-width:36ch}
+.foot__logo{
+  font-family:var(--ff-display);font-weight:400;font-size:1.8rem;letter-spacing:-.02em;
+  font-variation-settings:"opsz" 144, "SOFT" 50;display:flex;align-items:baseline;gap:.5rem;
+}
+.foot__logo em{font-style:italic;color:var(--volt);
+  font-variation-settings:"opsz" 144, "WONK" 1}
+.foot__tag{color:var(--stone);font-size:.95rem;line-height:1.5}
+.foot__col h4{
+  font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--volt);margin:0 0 1.2rem;font-weight:500;
+}
+.foot__col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.75rem}
+.foot__col a{font-size:.92rem;color:var(--bone);opacity:.7;transition:opacity .3s, color .3s}
+.foot__col a:hover{opacity:1;color:var(--volt)}
+.foot__bottom{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;
+  font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.05em;color:var(--stone);
+}
+.foot__legal{display:flex;gap:1.5rem}
+.foot__legal a:hover{color:var(--volt)}
+
+/* Arabic bilingual small-caps touch */
+.ar{font-family:serif;direction:rtl;unicode-bidi:isolate}
+
+/* ================
+   REVEAL helper
+================ */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .9s var(--ease-out), transform .9s var(--ease-out)}
+.reveal.is-visible{opacity:1;transform:translateY(0)}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  .marquee__track{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="cursor" id="cursor" aria-hidden="true"></div>
+<div class="cursor-dot" id="cursor-dot" aria-hidden="true"></div>
+
+<!-- =============== LOADER =============== -->
+<div class="loader" id="loader">
+  <div class="loader__mark">Moto<em>Linkers</em></div>
+  <div class="loader__pct" id="loader-pct">00</div>
+</div>
+<div class="loader__bar" id="loader-bar"></div>
+
+<!-- =============== NAV =============== -->
+<nav class="nav" id="nav" aria-label="Primary">
+  <a href="#" class="nav__logo" data-hover>
+    <span class="nav__logo-mark" aria-hidden="true"></span>
+    Moto<em>Linkers</em>
+  </a>
+  <div class="nav__links">
+    <a href="#fleet" class="nav__link" data-hover>Fleet</a>
+    <a href="#calculator" class="nav__link" data-hover>Calculator</a>
+    <a href="#routes" class="nav__link" data-hover>Routes</a>
+    <a href="#process" class="nav__link" data-hover>Process</a>
+    <a href="#words" class="nav__link" data-hover>Voices</a>
+  </div>
+  <a href="#calculator" class="nav__cta" data-hover>
+    Import a vehicle
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+  </a>
+  <button class="nav__menu" id="menuBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- Mobile menu panel -->
+<div class="menu-panel" id="menuPanel">
+  <button class="menu-panel__close" id="menuClose" aria-label="Close menu">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+  </button>
+  <ul class="menu-panel__list">
+    <li><a href="#fleet">The <em>Fleet</em></a></li>
+    <li><a href="#calculator">True <em>cost</em></a></li>
+    <li><a href="#routes">Trade <em>lanes</em></a></li>
+    <li><a href="#process">How it <em>works</em></a></li>
+    <li><a href="#words"><em>Voices</em></a></li>
+  </ul>
+</div>
+
+<!-- =============== HERO =============== -->
+<header class="hero" id="home">
+  <div class="hero__bg" aria-hidden="true"></div>
+  <div class="hero__mesh" aria-hidden="true"></div>
+  <div class="hero__grid" aria-hidden="true"></div>
+
+  <div class="wrap" style="width:100%">
+
+    <div class="hero__meta">
+      <div class="hero__meta-item">
+        <strong><span class="dot"></span>Cairo · Alexandria</strong>
+        <span>Est. 2020 · Operator since</span>
+      </div>
+      <div class="hero__meta-item" style="text-align:right">
+        <strong>N 30.0444 · E 31.2357</strong>
+        <span>Working hours · Sun–Thu · 11:00–23:00</span>
+      </div>
+    </div>
+
+    <h1 class="hero__title" aria-label="Transparency is the new luxury.">
+      <span class="line"><span>Transparency</span></span>
+      <span class="line"><span>is the new</span></span>
+      <span class="line"><span><em>luxury.</em></span></span>
+    </h1>
+
+    <div class="hero__foot">
+      <p class="hero__lede">
+        Egypt's quietly radical EV import consultancy. We don't sell cars — we hand you the <em>factory price</em>, the real landed cost, and a verified path from a Chinese or Emirati port to your driveway.
+      </p>
+      <div class="hero__ctas">
+        <a href="#fleet" class="btn btn--primary" data-hover>
+          Explore the fleet
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
+        </a>
+        <a href="#calculator" class="btn btn--ghost" data-hover>
+          Compute your cost
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <aside class="hero__ticker" aria-hidden="true">
+    <div><strong>17%</strong><span>EV tax rate</span></div>
+    <div><strong>27%</strong><span>REEV tax rate</span></div>
+    <div><strong>58%</strong><span>PHEV tax rate</span></div>
+    <div><strong>28–45 <small>d</small></strong><span>Transit window</span></div>
+  </aside>
+
+  <div class="hero__scroll"><span>Scroll</span><span class="hero__scroll-line"></span></div>
+</header>
+
+<!-- =============== MARQUEE =============== -->
+<section class="marquee" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">BYD</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Denza</em></span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Avatr</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Zeekr</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Deepal</em></span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Changan</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">GAC</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Leapmotor</em></span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Nio</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Xpeng</em></span>
+    <span class="marquee__dot"></span>
+    <!-- Duplicate for infinite scroll -->
+    <span class="marquee__item">BYD</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Denza</em></span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Avatr</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Zeekr</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Deepal</em></span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Changan</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">GAC</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Leapmotor</em></span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item">Nio</span>
+    <span class="marquee__dot"></span>
+    <span class="marquee__item"><em>Xpeng</em></span>
+    <span class="marquee__dot"></span>
+  </div>
+</section>
+
+<!-- =============== MANIFESTO =============== -->
+<section class="manifesto" id="manifesto">
+  <div class="wrap">
+    <div class="manifesto__grid">
+      <div>
+        <span class="label">Who we are</span>
+        <h2 class="manifesto__title reveal">A logistics firm, not a <em>dealership.</em></h2>
+      </div>
+      <div>
+        <div class="manifesto__body reveal">
+          <p>MotoLinkers is an Egypt-based automotive supply-chain consultancy with over <strong>five years</strong> of experience connecting manufacturers, importers, and logistics partners. We specialise in moving vehicles and parts through trusted supplier networks, freight solutions, customs expertise, and data-driven logistics strategy.</p>
+          <p>We are <strong>not a car trading company</strong>. We are a professional logistics partner focused on building efficient, transparent, and performance-driven automotive supply chains — between the Pearl River Delta, Jebel Ali, and Alexandria.</p>
+        </div>
+
+        <div class="pillars">
+          <article class="pillar reveal">
+            <div class="pillar__num">01 — Truth</div>
+            <h3 class="pillar__title">Factory-direct pricing</h3>
+            <p class="pillar__text">The FOB number on our page is the number the manufacturer invoices. No hidden margins, no rebranded markups.</p>
+          </article>
+          <article class="pillar reveal">
+            <div class="pillar__num">02 — Proof</div>
+            <h3 class="pillar__title">Verified network</h3>
+            <p class="pillar__text">Every manufacturer in our pipeline has passed a five-stage quality and documentation audit before we ship a single unit.</p>
+          </article>
+          <article class="pillar reveal">
+            <div class="pillar__num">03 — Path</div>
+            <h3 class="pillar__title">End-to-end ownership</h3>
+            <p class="pillar__text">ACI, Nafeza, customs, 3PL, last-mile. We move the car from the factory floor to your plate in one unbroken chain.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============== FLEET =============== -->
+<section class="fleet" id="fleet">
+  <div class="wrap">
+    <div class="fleet__head">
+      <div>
+        <span class="label">The Fleet · 2026</span>
+        <h2 class="fleet__title reveal">Select from a <em>curated</em> global shelf.</h2>
+      </div>
+      <p class="fleet__sub reveal">Every unit below is live inventory — indexed daily against factory price sheets in Guangzhou, Shenzhen, and Dubai. Prices in EGP include our full landed-cost calculation.</p>
+    </div>
+
+    <div class="fleet__filters" role="tablist" aria-label="Filter fleet by origin">
+      <button class="chip is-active" data-filter="all" role="tab">All · <span id="count-all">15</span></button>
+      <button class="chip" data-filter="cn" role="tab">🇨🇳 From China</button>
+      <button class="chip" data-filter="ae" role="tab">🇦🇪 From UAE</button>
+      <button class="chip" data-filter="ev" role="tab">⚡ Pure EV</button>
+      <button class="chip" data-filter="hybrid" role="tab">🔋 Hybrid / REEV</button>
+    </div>
+
+    <div class="fleet__grid" id="fleetGrid">
+      <!-- cars injected by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- =============== CALCULATOR =============== -->
+<section class="calc" id="calculator">
+  <div class="calc__bg" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="calc__head">
+      <div>
+        <span class="label">Landed-cost calculator</span>
+        <h2 class="calc__title reveal">Every pound, <em>accounted for.</em></h2>
+      </div>
+      <p class="calc__sub reveal">Four inputs. Full breakdown. The same math our consultants run on a Monday morning — taxes, freight, insurance, clearance, and exchange margin all exposed.</p>
+    </div>
+
+    <div class="calc__shell">
+      <div class="steps" id="calcSteps" role="tablist">
+        <div class="step-pill is-active" data-step="1"><span class="n">1</span>Vehicle</div>
+        <div class="step-pill" data-step="2"><span class="n">2</span>Type</div>
+        <div class="step-pill" data-step="3"><span class="n">3</span>Origin</div>
+        <div class="step-pill" data-step="4"><span class="n">4</span>Payment</div>
+        <div class="step-pill" data-step="5"><span class="n">5</span>Results</div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div class="step-panel is-active" data-panel="1">
+        <h3>Tell us about the vehicle.</h3>
+        <p class="hint">Start with the model and the factory (FOB) price in US dollars. You'll find both on our Fleet page or on autohome.com.cn.</p>
+        <div class="field">
+          <label for="carName">Vehicle Name</label>
+          <input id="carName" type="text" placeholder="e.g. BYD Sealion 06 EV 605 PLUS" value="BYD Sealion 06 EV 605 PLUS" />
+        </div>
+        <div class="field">
+          <label for="fobPrice">FOB Price (USD)</label>
+          <input id="fobPrice" type="number" placeholder="e.g. 26500" value="26500" />
+        </div>
+        <div class="calc__actions">
+          <span></span>
+          <button class="btn btn--primary" data-next="2" data-hover>Continue <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step-panel" data-panel="2">
+        <h3>What kind of drivetrain?</h3>
+        <p class="hint">The Egyptian tariff structure rewards electrification. Pure EVs are taxed at 17%, hybrids significantly higher.</p>
+        <div class="choices">
+          <button class="choice" data-choice="type" data-value="ev" data-rate="0.17" data-hover>
+            <span class="choice__icon">⚡</span>
+            <span class="choice__title">Pure Electric (EV)</span>
+            <span class="choice__meta">Tariff <strong>17%</strong></span>
+          </button>
+          <button class="choice" data-choice="type" data-value="reev" data-rate="0.27" data-hover>
+            <span class="choice__icon">🔋</span>
+            <span class="choice__title">Range Extended (REEV)</span>
+            <span class="choice__meta">Tariff <strong>27%</strong></span>
+          </button>
+          <button class="choice" data-choice="type" data-value="phev" data-rate="0.58" data-hover>
+            <span class="choice__icon">🔌</span>
+            <span class="choice__title">Plug-in Hybrid (PHEV)</span>
+            <span class="choice__meta">Tariff <strong>58%</strong></span>
+          </button>
+        </div>
+        <div class="calc__actions">
+          <button class="btn btn--ghost" data-prev="1" data-hover>← Back</button>
+          <button class="btn btn--primary" data-next="3" data-hover>Continue <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step-panel" data-panel="3">
+        <h3>Where is it shipping from?</h3>
+        <p class="hint">Two proven lanes into Alexandria. China gives you selection; UAE gives you speed.</p>
+        <div class="choices">
+          <button class="choice" data-choice="origin" data-value="cn" data-freight="4025" data-days="45" data-hover>
+            <span class="choice__icon">🇨🇳</span>
+            <span class="choice__title">China</span>
+            <span class="choice__meta">Nansha → Alexandria · <strong>$4,025</strong> · 45 days</span>
+          </button>
+          <button class="choice" data-choice="origin" data-value="ae" data-freight="2900" data-days="28" data-hover>
+            <span class="choice__icon">🇦🇪</span>
+            <span class="choice__title">United Arab Emirates</span>
+            <span class="choice__meta">Jebel Ali → Alexandria · <strong>$2,900</strong> · 28 days</span>
+          </button>
+        </div>
+        <div class="calc__actions">
+          <button class="btn btn--ghost" data-prev="2" data-hover>← Back</button>
+          <button class="btn btn--primary" data-next="4" data-hover>Continue <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="step-panel" data-panel="4">
+        <h3>How will payment be routed?</h3>
+        <p class="hint">Bank-to-bank routes are cheaper on the FX spread; direct USD transfers are faster.</p>
+        <div class="choices">
+          <button class="choice" data-choice="payment" data-value="usd" data-fee="0.03" data-hover>
+            <span class="choice__icon">💵</span>
+            <span class="choice__title">USD Transfer</span>
+            <span class="choice__meta">Margin <strong>+3%</strong> on FOB</span>
+          </button>
+          <button class="choice" data-choice="payment" data-value="bank" data-fee="0.015" data-hover>
+            <span class="choice__icon">🏦</span>
+            <span class="choice__title">Bank Transfer</span>
+            <span class="choice__meta">Margin <strong>+1.5%</strong> on FOB</span>
+          </button>
+        </div>
+        <div class="calc__actions">
+          <button class="btn btn--ghost" data-prev="3" data-hover>← Back</button>
+          <button class="btn btn--primary" id="calcRun" data-hover>Calculate 🧮</button>
+        </div>
+      </div>
+
+      <!-- STEP 5 — results -->
+      <div class="step-panel" data-panel="5">
+        <h3>Your true landed cost.</h3>
+        <p class="hint">All figures in USD unless noted. EGP conversion uses a live-rate caveat of ≈ 50 EGP / USD — refresh on the day of transfer.</p>
+
+        <div class="results">
+          <div class="results__total">
+            <div>
+              <div class="results__total-label">Total Landed Cost</div>
+              <div class="results__total-value" id="totalUsd">$0</div>
+              <div class="results__total-sub" id="totalLabel">Delivered, Cairo</div>
+            </div>
+            <div class="results__total-conversion">
+              ≈ <span id="totalEgp">0</span> EGP
+              <div style="opacity:.7;margin-top:.3rem;font-size:.72rem">Transit time: <strong id="totalDays">0 days</strong></div>
+            </div>
+          </div>
+
+          <div class="breakdown" id="breakdown">
+            <!-- rows injected -->
+          </div>
+        </div>
+
+        <div class="calc__actions">
+          <button class="btn btn--ghost" data-prev="4" data-hover>← Adjust</button>
+          <button class="btn btn--primary" id="calcReset" data-hover>Start Over</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =============== ROUTES =============== -->
+<section class="routes" id="routes">
+  <div class="wrap">
+    <span class="label">Trade Lanes</span>
+    <h2 class="routes__title reveal">Two ports. <em>One destination.</em></h2>
+
+    <div class="routes__grid">
+      <!-- CHINA route -->
+      <article class="route reveal">
+        <div class="route__head">
+          <div class="route__from-to">
+            <span class="route__flag route__flag--cn" aria-hidden="true"></span>
+            Nansha
+            <span class="route__arrow">→</span>
+            <span class="route__flag route__flag--eg" aria-hidden="true"></span>
+            Alexandria
+          </div>
+          <span class="route__number">Lane 01</span>
+        </div>
+
+        <div class="route__map" aria-hidden="true">
+          <svg viewBox="0 0 600 160" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="gradCN" x1="0" x2="1">
+                <stop offset="0%" stop-color="#DE2910"/>
+                <stop offset="100%" stop-color="#B8411C"/>
+              </linearGradient>
+            </defs>
+            <!-- dashed route -->
+            <path d="M30 110 Q 180 10, 300 80 T 570 60" fill="none" stroke="url(#gradCN)" stroke-width="2" stroke-dasharray="6 5" class="route-path"/>
+            <!-- origin -->
+            <circle cx="30" cy="110" r="7" fill="#DE2910"/>
+            <circle cx="30" cy="110" r="14" fill="none" stroke="#DE2910" stroke-opacity=".3"/>
+            <!-- dest -->
+            <circle cx="570" cy="60" r="7" fill="#B8411C"/>
+            <circle cx="570" cy="60" r="14" fill="none" stroke="#B8411C" stroke-opacity=".3"/>
+            <!-- labels -->
+            <text x="30" y="140" font-family="Geist Mono, monospace" font-size="10" fill="#0A0A0B" opacity=".6" text-anchor="middle">GZHOU · CN</text>
+            <text x="570" y="40" font-family="Geist Mono, monospace" font-size="10" fill="#0A0A0B" opacity=".6" text-anchor="middle">ALX · EG</text>
+            <!-- mid label -->
+            <text x="300" y="150" font-family="Geist Mono, monospace" font-size="9" fill="#B8411C" text-anchor="middle" letter-spacing="2">≈ 12,800 KM · SUEZ CANAL</text>
+          </svg>
+        </div>
+
+        <div class="route__stats">
+          <div>
+            <div class="route__stat-label">Freight</div>
+            <div class="route__stat-value">$<em>4,025</em></div>
+          </div>
+          <div>
+            <div class="route__stat-label">Transit</div>
+            <div class="route__stat-value"><em>45</em>d</div>
+          </div>
+          <div>
+            <div class="route__stat-label">Carriers</div>
+            <div class="route__stat-value"><em>12</em>+</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- UAE route -->
+      <article class="route reveal">
+        <div class="route__head">
+          <div class="route__from-to">
+            <span class="route__flag route__flag--ae" aria-hidden="true"></span>
+            Jebel Ali
+            <span class="route__arrow">→</span>
+            <span class="route__flag route__flag--eg" aria-hidden="true"></span>
+            Alexandria
+          </div>
+          <span class="route__number">Lane 02</span>
+        </div>
+
+        <div class="route__map" aria-hidden="true">
+          <svg viewBox="0 0 600 160" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="gradAE" x1="0" x2="1">
+                <stop offset="0%" stop-color="#00732F"/>
+                <stop offset="100%" stop-color="#B8411C"/>
+              </linearGradient>
+            </defs>
+            <path d="M30 80 Q 250 30, 570 80" fill="none" stroke="url(#gradAE)" stroke-width="2" stroke-dasharray="6 5" class="route-path"/>
+            <circle cx="30" cy="80" r="7" fill="#00732F"/>
+            <circle cx="30" cy="80" r="14" fill="none" stroke="#00732F" stroke-opacity=".3"/>
+            <circle cx="570" cy="80" r="7" fill="#B8411C"/>
+            <circle cx="570" cy="80" r="14" fill="none" stroke="#B8411C" stroke-opacity=".3"/>
+            <text x="30" y="110" font-family="Geist Mono, monospace" font-size="10" fill="#0A0A0B" opacity=".6" text-anchor="middle">DXB · AE</text>
+            <text x="570" y="110" font-family="Geist Mono, monospace" font-size="10" fill="#0A0A0B" opacity=".6" text-anchor="middle">ALX · EG</text>
+            <text x="300" y="30" font-family="Geist Mono, monospace" font-size="9" fill="#B8411C" text-anchor="middle" letter-spacing="2">≈ 5,200 KM · RED SEA</text>
+          </svg>
+        </div>
+
+        <div class="route__stats">
+          <div>
+            <div class="route__stat-label">Freight</div>
+            <div class="route__stat-value">$<em>2,900</em></div>
+          </div>
+          <div>
+            <div class="route__stat-label">Transit</div>
+            <div class="route__stat-value"><em>28</em>d</div>
+          </div>
+          <div>
+            <div class="route__stat-label">Carriers</div>
+            <div class="route__stat-value"><em>7</em>+</div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =============== PROCESS =============== -->
+<section class="process" id="process">
+  <div class="wrap">
+    <div class="process__head">
+      <span class="label">How it works</span>
+      <h2 class="process__title reveal">From selection to <em>steering wheel.</em></h2>
+    </div>
+
+    <div class="process__rail" id="processRail">
+      <div class="process__line"></div>
+      <div class="process__line-fill" id="processFill"></div>
+
+      <article class="step-card reveal is-active">
+        <div class="step-card__num">01</div>
+        <h3 class="step-card__title">Selection</h3>
+        <p class="step-card__text">Choose a verified model, brand, and trim from our daily-indexed global database. We validate VIN, factory batch, and export permit before you commit.</p>
+      </article>
+      <article class="step-card reveal">
+        <div class="step-card__num">02</div>
+        <h3 class="step-card__title">Freight</h3>
+        <p class="step-card__text">We book roll-on/roll-off or container on the next sailing from Nansha or Jebel Ali. Insurance, consolidation, and shipping-line coordination handled in-house.</p>
+      </article>
+      <article class="step-card reveal">
+        <div class="step-card__num">03</div>
+        <h3 class="step-card__title">Customs</h3>
+        <p class="step-card__text">ACI, Nafeza, Ministry of Trade, Ministry of Communications, Cargo-X. We file every document, pay every duty, and walk the car through Egyptian clearance.</p>
+      </article>
+      <article class="step-card reveal">
+        <div class="step-card__num">04</div>
+        <h3 class="step-card__title">Delivery</h3>
+        <p class="step-card__text">From Alexandria port to your address or dealership. Plate registration, cellular pairing, first service — all included.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =============== TESTIMONIALS =============== -->
+<section class="words" id="words">
+  <div class="wrap">
+    <span class="label">Voices</span>
+    <h2 class="words__title reveal">Finance people, <em>logistics</em> people, <em>operators.</em></h2>
+
+    <div class="words__grid">
+      <article class="quote reveal">
+        <div class="quote__mark">"</div>
+        <p class="quote__text">What impressed me most was the clarity. I knew exactly what I was paying for and why.</p>
+        <div class="quote__by">
+          <div class="quote__avatar">YD</div>
+          <div class="quote__who">
+            <span class="quote__name">Yasser Dawood</span>
+            <span class="quote__role">Branch Manager · E-Bank</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="quote reveal">
+        <div class="quote__mark">"</div>
+        <p class="quote__text">As someone working in finance, transparency is critical for me. The entire process was structured and documented, from factory pricing to freight and delivery. There were no hidden costs.</p>
+        <div class="quote__by">
+          <div class="quote__avatar">WZ</div>
+          <div class="quote__who">
+            <span class="quote__name">Wael Zaky</span>
+            <span class="quote__role">Finance Manager · E-Bank</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="quote reveal">
+        <div class="quote__mark">"</div>
+        <p class="quote__text">The car arrived exactly as promised and at a better value than what I was seeing locally. Overall, it felt trustworthy.</p>
+        <div class="quote__by">
+          <div class="quote__avatar">MS</div>
+          <div class="quote__who">
+            <span class="quote__name">Maha Shafiq</span>
+            <span class="quote__role">Operations Manager · OSOCO</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="quote reveal">
+        <div class="quote__mark">"</div>
+        <p class="quote__text">How satisfied I felt once I started driving the car. The whole experience — from choosing the car to receiving it — was simple, professional, and exactly what I was hoping for.</p>
+        <div class="quote__by">
+          <div class="quote__avatar">SM</div>
+          <div class="quote__who">
+            <span class="quote__name">Seif Maged</span>
+            <span class="quote__role">Logistics Manager · ArcelorMittal</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="quote reveal">
+        <div class="quote__mark">"</div>
+        <p class="quote__text">The team handled everything end-to-end — supplier verification, quality checks, shipping, delivery coordination. Stress-free.</p>
+        <div class="quote__by">
+          <div class="quote__avatar">TR</div>
+          <div class="quote__who">
+            <span class="quote__name">Tamer Refaat</span>
+            <span class="quote__role">Head of Central Ops · E-Bank</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- =============== STATS =============== -->
+<section class="stats">
+  <div class="wrap">
+    <div class="stats__grid">
+      <div class="stat">
+        <div class="stat__value"><em data-count="5">0</em>+</div>
+        <div class="stat__label">Years in Operation</div>
+      </div>
+      <div class="stat">
+        <div class="stat__value"><em data-count="220">0</em></div>
+        <div class="stat__label">Vehicles Landed</div>
+      </div>
+      <div class="stat">
+        <div class="stat__value"><em data-count="17">0</em></div>
+        <div class="stat__label">Verified Manufacturers</div>
+      </div>
+      <div class="stat">
+        <div class="stat__value"><em data-count="0" data-target="100">0</em>%</div>
+        <div class="stat__label">Clearance Success Rate</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============== CTA =============== -->
+<section class="cta">
+  <div class="wrap">
+    <div class="cta__inner">
+      <h2 class="cta__title reveal">Move your <em>automotive vision</em> forward.</h2>
+      <p class="cta__body reveal">Whether you're a business optimising supply chain or an individual importing your next vehicle — our consultants are on the other side of a short form. <span class="ar">كل خطوة موثّقة.</span></p>
+      <div class="cta__ctas">
+        <a href="#calculator" class="btn btn--primary" data-hover>
+          Start your import plan
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>
+        </a>
+        <a href="mailto:info@motolinkers.com" class="btn btn--ghost" data-hover>
+          Talk to a consultant
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============== FOOTER =============== -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__top">
+      <div class="foot__brand">
+        <div class="foot__logo">Moto<em>Linkers</em></div>
+        <p class="foot__tag">Egypt-based automotive supply-chain consultancy, connecting manufacturers, importers, and logistics partners across three continents.</p>
+        <div style="display:flex;gap:.8rem;font-family:var(--ff-mono);font-size:.78rem;color:var(--bone);opacity:.7;margin-top:.4rem">
+          <a href="mailto:info@motolinkers.com" data-hover>info@motolinkers.com</a>
+          <span>·</span>
+          <a href="tel:+20100078104" data-hover>+20 100 007 8104</a>
+        </div>
+      </div>
+
+      <div class="foot__col">
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="#manifesto" data-hover>About</a></li>
+          <li><a href="#fleet" data-hover>Fleet</a></li>
+          <li><a href="#calculator" data-hover>Calculator</a></li>
+          <li><a href="#routes" data-hover>Routes</a></li>
+          <li><a href="#process" data-hover>Process</a></li>
+        </ul>
+      </div>
+
+      <div class="foot__col">
+        <h4>Brands</h4>
+        <ul>
+          <li><a href="#fleet" data-hover>BYD</a></li>
+          <li><a href="#fleet" data-hover>Denza</a></li>
+          <li><a href="#fleet" data-hover>Avatr</a></li>
+          <li><a href="#fleet" data-hover>Deepal</a></li>
+          <li><a href="#fleet" data-hover>Zeekr</a></li>
+        </ul>
+      </div>
+
+      <div class="foot__col">
+        <h4>Hours</h4>
+        <ul>
+          <li style="opacity:.85">Sun – Thu</li>
+          <li style="opacity:.85">11:00 – 23:00 EET</li>
+          <li style="margin-top:.5rem"><a href="#calculator" data-hover>Subscribe</a></li>
+          <li><a href="#" data-hover>FAQs</a></li>
+          <li><a href="#" data-hover>Privacy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot__bottom">
+      <div>© 2026 MotoLinkers · All rights reserved</div>
+      <div class="foot__legal">
+        <a href="#" data-hover>Terms</a>
+        <a href="#" data-hover>Privacy</a>
+        <a href="#" data-hover>Cookies</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- =============== SCRIPTS =============== -->
+<script>
+// =============================================================
+//  DATA — real cars sourced from motolinkers.com catalog
+// =============================================================
+const FLEET = [
+  { id:'denza-n9', name:'Denza N9 Premium', origin:'cn', type:'hybrid', year:2026, price:5495808, trans:'CVT', drive:'Hybrid', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChxkPmcIg1SAC8aOABS-CaJfeEE991.avif' },
+  { id:'denza-d9', name:'Denza D9 DMI Navigator', origin:'cn', type:'hybrid', year:2026, price:4582780, trans:'Auto', drive:'Hybrid', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__Chto52l282aAdFJRACsqCVLYKVo946.avif' },
+  { id:'leopard-8', name:'Fang Cheng Bao Leopard 8', origin:'cn', type:'hybrid', year:2026, price:5272026, trans:'CVT', drive:'Hybrid · 7-seat', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtlyGe294uAVmSDADGjc-F-DHE533.avif' },
+  { id:'leopard-7', name:'Leopard 7 190KM Ultra 4WD', origin:'cn', type:'hybrid', year:2026, price:3123726, trans:'Auto', drive:'Hybrid 4WD', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChxpWGkITn-AJLkFAAmiY-1RJCo135.avif' },
+  { id:'byd-tang', name:'BYD Tang L EV LiDAR Flagship', origin:'cn', type:'ev', year:2026, price:2485445, trans:'Fixed', drive:'670 km · Pure EV', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtpWGknIiyATwyuADJRagq1gp0475.avif' },
+  { id:'byd-sealion', name:'BYD Sealion 06 EV 605 PLUS', origin:'cn', type:'ev', year:2026, price:1735474, trans:'Fixed', drive:'605 km · Pure EV', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__Chto52jx-KSAPEjYACgLYFpHJ3E958.avif' },
+  { id:'byd-yuan', name:'BYD Yuan Up Smart Driving', origin:'cn', type:'ev', year:2025, price:1316556, trans:'Fixed', drive:'401 km · Pure EV', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtlyGe8g0SAGTSOACml6eF6rXE546.avif' },
+  { id:'icar-v23', name:'ICAR V23 4WD', origin:'cn', type:'ev', year:2026, price:1796978, trans:'Fixed', drive:'Electric 4WD', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtpWGkIPwCAYgMbADp0_hK49ow697.avif' },
+  { id:'nissan-n7', name:'Nissan N7 625 Max', origin:'cn', type:'ev', year:2026, price:1517340, trans:'Single-Speed', drive:'625 km · EV', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__Chtlx2gR21iAVZEFAFTCkCgt7TI284-1.avif' },
+  { id:'bmw-i3', name:'BMW i3 40 L', origin:'ae', type:'ev', year:2026, price:2501031, trans:'Single-Speed', drive:'Pure EV', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChxpVml3lMOAK5jcAD2ES09g0Ms415.avif' },
+  { id:'deepal-s05-max', name:'Deepal S05 EV 620 Max', origin:'cn', type:'ev', year:2026, price:1447221, trans:'Single-Speed', drive:'620 km · EV', img:'https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtpWGisQU-AHOnIAFNwUKrNxXc077-3.avif' },
+  { id:'deepal-s05', name:'Deepal S05 520 Plus', origin:'cn', type:'ev', year:2026, price:1199785, trans:'Auto', drive:'520 km · EV', img:'https://motolinkers.com/wp-content/uploads/2026/03/22-660x440.avif' },
+  { id:'avatr-12', name:'Avatr 12 Max EV', origin:'ae', type:'ev', year:2026, price:2717414, trans:'Auto', drive:'Pure EV · Flagship', img:'https://motolinkers.com/wp-content/uploads/2026/02/banner_pc-660x440.jpg' },
+  { id:'avatr-07r', name:'Avatr 07 REEV Ultra', origin:'cn', type:'hybrid', year:2026, price:2417567, trans:'Auto', drive:'REEV Ultra', img:'https://motolinkers.com/wp-content/uploads/2026/02/CAR-2-660x440.jpg' },
+  { id:'avatr-07e', name:'Avatr 07 EV Max Plus', origin:'ae', type:'ev', year:2026, price:2683590, trans:'Auto', drive:'Pure EV Max', img:'https://motolinkers.com/wp-content/uploads/2026/02/CAR-1-660x440.jpg' },
+];
+
+function formatEGP(n){return n.toLocaleString('en-US') + ' EGP'}
+function formatUSD(n){return '$' + Math.round(n).toLocaleString('en-US')}
+
+// =============================================================
+//  RENDER FLEET
+// =============================================================
+function renderFleet(filter='all'){
+  const grid = document.getElementById('fleetGrid');
+  const items = FLEET.filter(c => {
+    if(filter==='all') return true;
+    if(filter==='cn' || filter==='ae') return c.origin===filter;
+    if(filter==='ev' || filter==='hybrid') return c.type===filter;
+    return true;
+  });
+
+  grid.innerHTML = items.map(c => `
+    <article class="car" data-hover data-origin="${c.origin}" data-type="${c.type}">
+      <div class="car__badge car__badge--${c.origin}">
+        <span class="flag"></span>${c.origin==='cn'?'China':'UAE'} · ${c.type==='ev'?'EV':'Hybrid'}
+      </div>
+      <div class="car__img" style="background-image:url('${c.img}')"></div>
+      <div class="car__body">
+        <h3 class="car__title">${c.name}</h3>
+        <div class="car__specs">
+          <span>${c.drive}</span>
+          <span>${c.trans}</span>
+          <span>${c.year}</span>
+        </div>
+        <div class="car__price-row">
+          <div class="car__price">${c.price.toLocaleString()}<small>EGP</small></div>
+          <span class="car__link">View →</span>
+        </div>
+      </div>
+    </article>
+  `).join('');
+
+  // re-register hover handlers for new elements
+  setupHoverTargets();
+  document.getElementById('count-all').textContent = items.length;
+}
+
+// =============================================================
+//  FLEET FILTERS
+// =============================================================
+document.querySelectorAll('.fleet__filters .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.fleet__filters .chip').forEach(c=>c.classList.remove('is-active'));
+    chip.classList.add('is-active');
+    const f = chip.dataset.filter;
+    renderFleet(f);
+  });
+});
+
+// =============================================================
+//  CALCULATOR — state + logic
+// =============================================================
+const CALC = {
+  step: 1,
+  carName: 'BYD Sealion 06 EV 605 PLUS',
+  fob: 26500,
+  type: null,        // 'ev' | 'reev' | 'phev'
+  typeRate: 0,
+  origin: null,      // 'cn' | 'ae'
+  freight: 0,
+  days: 0,
+  payment: null,     // 'usd' | 'bank'
+  paymentFee: 0,
+};
+const EGP_RATE = 50; // approximate caveat rate
+
+function showStep(n){
+  CALC.step = n;
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.toggle('is-active', +p.dataset.panel===n));
+  document.querySelectorAll('.step-pill').forEach(s => {
+    const k = +s.dataset.step;
+    s.classList.toggle('is-active', k===n);
+    s.classList.toggle('is-done', k<n);
+  });
+}
+
+// Next / prev
+document.querySelectorAll('[data-next]').forEach(b => {
+  b.addEventListener('click', () => {
+    const target = +b.dataset.next;
+    if(target === 2){
+      CALC.carName = document.getElementById('carName').value.trim() || 'Your vehicle';
+      CALC.fob = parseFloat(document.getElementById('fobPrice').value) || 0;
+      if(CALC.fob <= 0){ document.getElementById('fobPrice').focus(); return; }
+    }
+    if(target === 3 && !CALC.type){ alert('Pick a drivetrain type.'); return; }
+    if(target === 4 && !CALC.origin){ alert('Pick an origin.'); return; }
+    showStep(target);
+  });
+});
+document.querySelectorAll('[data-prev]').forEach(b => {
+  b.addEventListener('click', () => showStep(+b.dataset.prev));
+});
+document.querySelectorAll('.step-pill').forEach(p => {
+  p.addEventListener('click', () => {
+    const target = +p.dataset.step;
+    if(target <= CALC.step || p.classList.contains('is-done')) showStep(target);
+  });
+});
+
+// Choice buttons
+document.querySelectorAll('.choice').forEach(ch => {
+  ch.addEventListener('click', () => {
+    const group = ch.dataset.choice;
+    document.querySelectorAll(`.choice[data-choice="${group}"]`).forEach(c=>c.classList.remove('is-selected'));
+    ch.classList.add('is-selected');
+    if(group === 'type'){
+      CALC.type = ch.dataset.value;
+      CALC.typeRate = parseFloat(ch.dataset.rate);
+    }
+    if(group === 'origin'){
+      CALC.origin = ch.dataset.value;
+      CALC.freight = parseFloat(ch.dataset.freight);
+      CALC.days = parseInt(ch.dataset.days);
+    }
+    if(group === 'payment'){
+      CALC.payment = ch.dataset.value;
+      CALC.paymentFee = parseFloat(ch.dataset.fee);
+    }
+  });
+});
+
+// RUN
+document.getElementById('calcRun').addEventListener('click', () => {
+  if(!CALC.payment){ alert('Pick a payment route.'); return; }
+  runCalc();
+  showStep(5);
+});
+
+// RESET
+document.getElementById('calcReset').addEventListener('click', () => {
+  CALC.type = null; CALC.origin = null; CALC.payment = null;
+  document.querySelectorAll('.choice').forEach(c => c.classList.remove('is-selected'));
+  showStep(1);
+});
+
+function runCalc(){
+  const fob = CALC.fob;
+  const paymentFeeUSD = fob * CALC.paymentFee;
+  const freight = CALC.freight;
+  const insurance = (fob + freight) * 0.015;     // ~1.5% CIF insurance
+  const cifBase = fob + freight + insurance;
+  const customsDuty = cifBase * CALC.typeRate;
+  const vat = (cifBase + customsDuty) * 0.14;    // 14% VAT in Egypt
+  const clearance = 1200;                        // fixed clearance + docs
+  const inlandDelivery = 350;                    // port to door
+  const consultingFee = fob * 0.04;              // MotoLinkers fee 4%
+  const totalUSD = fob + paymentFeeUSD + freight + insurance + customsDuty + vat + clearance + inlandDelivery + consultingFee;
+  const totalEGP = totalUSD * EGP_RATE;
+
+  document.getElementById('totalUsd').textContent = formatUSD(totalUSD);
+  document.getElementById('totalEgp').textContent = Math.round(totalEGP).toLocaleString();
+  document.getElementById('totalDays').textContent = `${CALC.days} days`;
+  document.getElementById('totalLabel').textContent = `${CALC.carName} · ex ${CALC.origin==='cn'?'Nansha':'Jebel Ali'}`;
+
+  const rows = [
+    ['FOB Factory Price', formatUSD(fob)],
+    [`Payment Route (+${(CALC.paymentFee*100).toFixed(1)}%)`, formatUSD(paymentFeeUSD)],
+    ['Ocean Freight', formatUSD(freight)],
+    ['Marine Insurance (~1.5%)', formatUSD(insurance)],
+    [`Customs Duty (${(CALC.typeRate*100).toFixed(0)}%)`, formatUSD(customsDuty)],
+    ['VAT (14%)', formatUSD(vat)],
+    ['Clearance & ACI / Nafeza', formatUSD(clearance)],
+    ['Inland Delivery', formatUSD(inlandDelivery)],
+    ['MotoLinkers Fee (4%)', formatUSD(consultingFee)],
+  ];
+  document.getElementById('breakdown').innerHTML = rows.map(([l,v]) =>
+    `<div class="breakdown__row"><span class="l">${l}</span><span class="v">${v}</span></div>`
+  ).join('') + `<div class="breakdown__row total"><span class="l">Total landed, delivered</span><span class="v">${formatUSD(totalUSD)}</span></div>`;
+}
+
+// =============================================================
+//  CUSTOM CURSOR
+// =============================================================
+function setupCursor(){
+  if(window.matchMedia('(hover: none), (max-width: 900px)').matches) return;
+  const cursor = document.getElementById('cursor');
+  const dot = document.getElementById('cursor-dot');
+  let mx=0,my=0,cx=0,cy=0,dx=0,dy=0;
+  window.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY });
+  function loop(){
+    cx += (mx-cx)*.18; cy += (my-cy)*.18;
+    dx += (mx-dx)*.45; dy += (my-dy)*.45;
+    cursor.style.transform = `translate(${cx}px, ${cy}px) translate(-50%,-50%)`;
+    dot.style.transform = `translate(${dx}px, ${dy}px) translate(-50%,-50%)`;
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+function setupHoverTargets(){
+  const cursor = document.getElementById('cursor');
+  if(!cursor) return;
+  document.querySelectorAll('[data-hover], a, button, .car, .pillar, .route, .quote, .chip, .choice, .step-pill').forEach(el => {
+    if(el.__hoverBound) return;
+    el.__hoverBound = true;
+    el.addEventListener('mouseenter', () => cursor.classList.add('is-hovering'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('is-hovering'));
+  });
+}
+
+// =============================================================
+//  NAV behavior + mobile menu
+// =============================================================
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('is-scrolled', window.scrollY > 40);
+}, { passive: true });
+
+const menuPanel = document.getElementById('menuPanel');
+document.getElementById('menuBtn')?.addEventListener('click', () => menuPanel.classList.add('is-open'));
+document.getElementById('menuClose')?.addEventListener('click', () => menuPanel.classList.remove('is-open'));
+menuPanel.querySelectorAll('a').forEach(a => a.addEventListener('click', () => menuPanel.classList.remove('is-open')));
+
+// =============================================================
+//  LOADER
+// =============================================================
+function runLoader(done){
+  const loader = document.getElementById('loader');
+  const pct = document.getElementById('loader-pct');
+  const bar = document.getElementById('loader-bar');
+  let p = 0;
+  const tick = () => {
+    p = Math.min(p + Math.random()*8 + 3, 100);
+    pct.textContent = String(Math.floor(p)).padStart(2,'0');
+    bar.style.transform = `scaleX(${p/100})`;
+    if(p < 100) setTimeout(tick, 50);
+    else {
+      setTimeout(() => {
+        loader.style.transition = 'transform .9s cubic-bezier(0.83,0,0.17,1), opacity .5s';
+        loader.style.transform = 'translateY(-100%)';
+        loader.style.opacity = '0';
+        bar.style.transition = 'opacity .5s';
+        bar.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; bar.style.display='none'; done && done(); }, 900);
+      }, 200);
+    }
+  };
+  tick();
+}
+
+// =============================================================
+//  REVEAL ANIMATIONS via ScrollTrigger + Hero entrance
+// =============================================================
+function setupAnimations(){
+  if(!window.gsap) { simpleReveal(); return; }
+  gsap.registerPlugin(ScrollTrigger);
+
+  // HERO title reveal
+  gsap.to('.hero__title .line > span', {
+    y: 0, stagger: 0.12, duration: 1.1, ease: 'expo.out', delay: 0.1
+  });
+
+  // Hero meta + lede
+  gsap.from('.hero__meta, .hero__lede, .hero__ctas, .hero__scroll', {
+    opacity: 0, y: 20, stagger: .12, duration: .9, ease: 'power3.out', delay: 1.0
+  });
+
+  // Generic reveal
+  document.querySelectorAll('.reveal').forEach(el => {
+    gsap.fromTo(el, { opacity: 0, y: 40 }, {
+      opacity: 1, y: 0, duration: 1, ease: 'power3.out',
+      scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none none' }
+    });
+  });
+
+  // Counters
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.target || el.dataset.count);
+    ScrollTrigger.create({
+      trigger: el, start: 'top 80%', once: true,
+      onEnter: () => {
+        gsap.to({v:0}, { v: target, duration: 1.6, ease: 'power2.out',
+          onUpdate: function(){ el.textContent = Math.floor(this.targets()[0].v); }
+        });
+      }
+    });
+  });
+
+  // Process line fill
+  ScrollTrigger.create({
+    trigger: '#processRail',
+    start: 'top 70%', end: 'bottom 60%', scrub: 1,
+    onUpdate: self => {
+      const fill = document.getElementById('processFill');
+      if(fill) fill.style.width = `${self.progress * 100}%`;
+    }
+  });
+
+  // Step-card progressive activation
+  document.querySelectorAll('#processRail .step-card').forEach((card, i) => {
+    ScrollTrigger.create({
+      trigger: card, start: 'top 75%',
+      onEnter: () => card.classList.add('is-active')
+    });
+  });
+
+  // Route path reveal
+  document.querySelectorAll('.route-path').forEach(p => {
+    const len = p.getTotalLength();
+    gsap.set(p, { strokeDasharray: `${len} ${len}`, strokeDashoffset: len });
+    ScrollTrigger.create({
+      trigger: p, start: 'top 80%', once: true,
+      onEnter: () => gsap.to(p, { strokeDashoffset: 0, duration: 2, ease: 'power2.inOut' })
+    });
+  });
+
+  // Parallax hero grid
+  gsap.to('.hero__grid', {
+    y: 200,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 }
+  });
+  gsap.to('.hero__mesh', {
+    scale: 1.15, opacity: .3,
+    scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: 1 }
+  });
+}
+
+function simpleReveal(){
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('is-visible'); io.unobserve(e.target); }});
+  }, { threshold: .15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  document.querySelectorAll('.hero__title .line > span').forEach(s => s.style.transform='translateY(0)');
+}
+
+// =============================================================
+//  SMOOTH INTERNAL ANCHORS
+// =============================================================
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const href = a.getAttribute('href');
+    if(href && href.length > 1){
+      const t = document.querySelector(href);
+      if(t){ e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+  });
+});
+
+// =============================================================
+//  BOOT
+// =============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderFleet('all');
+  setupCursor();
+  setupHoverTargets();
+  runLoader(() => {
+    setupAnimations();
+  });
+});
+</script>
+</body>
+</html>
