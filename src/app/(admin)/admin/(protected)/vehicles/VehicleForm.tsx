@@ -6,6 +6,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { slugify } from "@/lib/utils";
 import { createVehicle, updateVehicle } from "./actions";
 import { uploadVehicleImage } from "./upload-action";
+import { syncVehicleGallery } from "./sync-action";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 
@@ -41,6 +42,7 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   // so a gallery upload doesn't block typing in the cover field.
   const [coverUploading, setCoverUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
+  const [gallerySyncing, setGallerySyncing] = useState(false);
   const [galleryUrlDraft, setGalleryUrlDraft] = useState("");
   const coverFileRef = useRef<HTMLInputElement | null>(null);
   const galleryFileRef = useRef<HTMLInputElement | null>(null);
@@ -131,6 +133,23 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     if (!url) return;
     setGallery((g) => [...g, url]);
     setGalleryUrlDraft("");
+  };
+
+  const onSyncFromR2 = async () => {
+    if (!isEdit || !vehicle) return;
+    setError(null);
+    setGallerySyncing(true);
+    try {
+      const result = await syncVehicleGallery(vehicle.id);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setGallery(result.gallery);
+      if (result.imageUrlSet) setImageUrl(result.imageUrlSet);
+    } finally {
+      setGallerySyncing(false);
+    }
   };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -390,6 +409,17 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
           >
             {galleryUploading ? "Uploading…" : "Upload images"}
           </button>
+          {isEdit && (
+            <button
+              type="button"
+              className="adm__btn adm__btn--ghost"
+              disabled={gallerySyncing}
+              onClick={onSyncFromR2}
+              title={`List images under ${slug}/ in R2 and replace this gallery with the result.`}
+            >
+              {gallerySyncing ? "Syncing…" : "Sync from R2"}
+            </button>
+          )}
         </div>
       </div>
 
