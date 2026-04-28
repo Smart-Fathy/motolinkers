@@ -55,7 +55,7 @@
 
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 body{
   background:var(--bg);
   color:var(--fg);
@@ -206,6 +206,7 @@ section{position:relative}
   padding:8rem clamp(1rem,4vw,3rem) 3rem;
   display:flex;flex-direction:column;justify-content:flex-end;
   overflow:hidden;isolation:isolate;
+  contain:paint;
 }
 .hero__bg{
   position:absolute;inset:0;z-index:-2;
@@ -213,14 +214,19 @@ section{position:relative}
     radial-gradient(1200px 600px at 70% 30%, rgba(201,168,76,.12), transparent 60%),
     radial-gradient(800px 500px at 20% 80%, rgba(232,208,140,.08), transparent 70%),
     linear-gradient(180deg, #04060E 0%, #060A14 60%, #0A1024 100%);
+  transform:translateZ(0);
 }
 .hero__mesh{
   position:absolute;inset:0;z-index:-1;opacity:.55;
+  /* Larger radii + softer alpha bake the diffusion into the gradient
+     itself, so we can drop the per-frame `filter: blur()` that was
+     rasterising during scroll-driven scale/opacity animation. */
   background-image:
-    radial-gradient(circle at 20% 30%, rgba(201,168,76,.14) 0%, transparent 35%),
-    radial-gradient(circle at 85% 70%, rgba(140,170,230,.08) 0%, transparent 40%),
-    radial-gradient(circle at 50% 100%, rgba(232,208,140,.07) 0%, transparent 50%);
-  filter:blur(40px);
+    radial-gradient(60% 55% at 20% 30%, rgba(201,168,76,.18), transparent 70%),
+    radial-gradient(55% 50% at 85% 70%, rgba(140,170,230,.10), transparent 75%),
+    radial-gradient(70% 60% at 50% 100%, rgba(232,208,140,.09), transparent 75%);
+  will-change:transform, opacity;
+  transform:translateZ(0);
 }
 .hero__grid{
   position:absolute;inset:0;z-index:-1;opacity:.06;
@@ -229,6 +235,8 @@ section{position:relative}
     linear-gradient(90deg, var(--bone) 1px, transparent 1px);
   background-size:80px 80px;
   mask-image:radial-gradient(ellipse at center, black 20%, transparent 80%);
+  will-change:transform;
+  transform:translateZ(0);
 }
 
 .hero__meta{
