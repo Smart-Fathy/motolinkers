@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DeleteButton from "./DeleteButton";
+import SyncAllButton from "./SyncAllButton";
 
 export const metadata = { title: "Vehicles — MotoLinkers Admin" };
 
@@ -31,9 +32,12 @@ export default async function VehiclesListPage() {
             {vehicles?.length ?? 0} vehicles · published &amp; unpublished
           </p>
         </div>
-        <Link href="/admin/vehicles/new" className="adm__btn adm__btn--primary">
-          + New vehicle
-        </Link>
+        <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <SyncAllButton />
+          <Link href="/admin/vehicles/new" className="adm__btn adm__btn--primary">
+            + New vehicle
+          </Link>
+        </div>
       </div>
 
       {error && <div className="adm__error">{error.message}</div>}
