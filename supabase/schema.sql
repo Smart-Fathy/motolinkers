@@ -8,8 +8,12 @@ create table if not exists public.vehicles (
   id uuid primary key default gen_random_uuid(),
   slug text unique not null,
   name text not null,
+  brand text,
+  model text,
   origin text not null check (origin in ('cn', 'ae')),
   type text not null check (type in ('ev', 'reev', 'phev', 'hybrid')),
+  body text check (body in ('sedan','suv','hatchback','coupe','wagon','pickup','mpv','convertible')),
+  drive_type text check (drive_type in ('fwd','rwd','awd','4wd')),
   year int not null,
   price_egp bigint not null,
   price_usd int,
@@ -17,6 +21,7 @@ create table if not exists public.vehicles (
   drivetrain text,
   range_km int,
   image_url text,
+  gallery jsonb default '[]'::jsonb,
   specs jsonb default '{}'::jsonb,
   is_featured boolean default false,
   is_published boolean default true,
@@ -26,7 +31,11 @@ create table if not exists public.vehicles (
 
 create index if not exists vehicles_origin_idx on public.vehicles(origin);
 create index if not exists vehicles_type_idx on public.vehicles(type);
+create index if not exists vehicles_brand_idx on public.vehicles(brand);
+create index if not exists vehicles_body_idx on public.vehicles(body);
+create index if not exists vehicles_drive_type_idx on public.vehicles(drive_type);
 create index if not exists vehicles_published_idx on public.vehicles(is_published);
+create index if not exists vehicles_price_idx on public.vehicles(price_egp);
 
 -- Leads (contact form submissions)
 create table if not exists public.leads (

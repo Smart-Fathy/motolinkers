@@ -1,5 +1,16 @@
 export type VehicleOrigin = "cn" | "ae";
 export type VehicleType = "ev" | "hybrid";
+export type VehiclePowerTrain = "ev" | "reev" | "phev" | "hybrid";
+export type VehicleBody =
+  | "sedan"
+  | "suv"
+  | "hatchback"
+  | "coupe"
+  | "wagon"
+  | "pickup"
+  | "mpv"
+  | "convertible";
+export type VehicleDriveType = "fwd" | "rwd" | "awd" | "4wd";
 
 export interface Vehicle {
   id: string;
@@ -11,6 +22,15 @@ export interface Vehicle {
   trans: string;
   drive: string;
   img: string;
+  // Filterable fields — populated from Supabase, optional in the static
+  // fallback so existing seed data still validates.
+  brand?: string | null;
+  model?: string | null;
+  body?: VehicleBody | null;
+  driveType?: VehicleDriveType | null;
+  powerTrain?: VehiclePowerTrain;
+  gallery?: string[];
+  createdAt?: string;
 }
 
 export const FLEET: Vehicle[] = [
