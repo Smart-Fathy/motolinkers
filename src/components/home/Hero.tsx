@@ -44,10 +44,10 @@ export default function Hero() {
             driveway.
           </p>
           <div className="hero__ctas">
-            <Button href="#fleet" variant="primary" withArrow="diagonal">
+            <Button href="/vehicles" variant="primary" withArrow="diagonal">
               Explore the fleet
             </Button>
-            <Button href="#calculator" variant="ghost">
+            <Button href="/calculator" variant="ghost">
               Compute your cost
             </Button>
           </div>

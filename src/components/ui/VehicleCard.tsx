@@ -1,8 +1,10 @@
+import Link from "next/link";
 import type { Vehicle } from "@/data/vehicles";
 
 export default function VehicleCard({ car }: { car: Vehicle }) {
   return (
-    <article
+    <Link
+      href={`/vehicles/${car.id}`}
       className="car"
       data-hover
       data-origin={car.origin}
@@ -32,6 +34,6 @@ export default function VehicleCard({ car }: { car: Vehicle }) {
           <span className="car__link">View →</span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
