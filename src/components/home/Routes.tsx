@@ -28,7 +28,7 @@ export default function Routes() {
                 <defs>
                   <linearGradient id="gradCN" x1="0" x2="1">
                     <stop offset="0%" stopColor="#DE2910" />
-                    <stop offset="100%" stopColor="#B8411C" />
+                    <stop offset="100%" stopColor="#C9A84C" />
                   </linearGradient>
                 </defs>
                 <path
@@ -48,13 +48,13 @@ export default function Routes() {
                   stroke="#DE2910"
                   strokeOpacity=".3"
                 />
-                <circle cx="570" cy="60" r="7" fill="#B8411C" />
+                <circle cx="570" cy="60" r="7" fill="#C9A84C" />
                 <circle
                   cx="570"
                   cy="60"
                   r="14"
                   fill="none"
-                  stroke="#B8411C"
+                  stroke="#C9A84C"
                   strokeOpacity=".3"
                 />
                 <text
@@ -62,7 +62,7 @@ export default function Routes() {
                   y="140"
                   fontFamily="Geist Mono, monospace"
                   fontSize="10"
-                  fill="#0A0A0B"
+                  fill="#EEE8DC"
                   opacity=".6"
                   textAnchor="middle"
                 >
@@ -73,7 +73,7 @@ export default function Routes() {
                   y="40"
                   fontFamily="Geist Mono, monospace"
                   fontSize="10"
-                  fill="#0A0A0B"
+                  fill="#EEE8DC"
                   opacity=".6"
                   textAnchor="middle"
                 >
@@ -84,7 +84,7 @@ export default function Routes() {
                   y="150"
                   fontFamily="Geist Mono, monospace"
                   fontSize="9"
-                  fill="#B8411C"
+                  fill="#C9A84C"
                   textAnchor="middle"
                   letterSpacing="2"
                 >
@@ -132,7 +132,7 @@ export default function Routes() {
                 <defs>
                   <linearGradient id="gradAE" x1="0" x2="1">
                     <stop offset="0%" stopColor="#00732F" />
-                    <stop offset="100%" stopColor="#B8411C" />
+                    <stop offset="100%" stopColor="#C9A84C" />
                   </linearGradient>
                 </defs>
                 <path
@@ -152,13 +152,13 @@ export default function Routes() {
                   stroke="#00732F"
                   strokeOpacity=".3"
                 />
-                <circle cx="570" cy="80" r="7" fill="#B8411C" />
+                <circle cx="570" cy="80" r="7" fill="#C9A84C" />
                 <circle
                   cx="570"
                   cy="80"
                   r="14"
                   fill="none"
-                  stroke="#B8411C"
+                  stroke="#C9A84C"
                   strokeOpacity=".3"
                 />
                 <text
@@ -166,7 +166,7 @@ export default function Routes() {
                   y="110"
                   fontFamily="Geist Mono, monospace"
                   fontSize="10"
-                  fill="#0A0A0B"
+                  fill="#EEE8DC"
                   opacity=".6"
                   textAnchor="middle"
                 >
@@ -177,7 +177,7 @@ export default function Routes() {
                   y="110"
                   fontFamily="Geist Mono, monospace"
                   fontSize="10"
-                  fill="#0A0A0B"
+                  fill="#EEE8DC"
                   opacity=".6"
                   textAnchor="middle"
                 >
@@ -188,7 +188,7 @@ export default function Routes() {
                   y="30"
                   fontFamily="Geist Mono, monospace"
                   fontSize="9"
-                  fill="#B8411C"
+                  fill="#C9A84C"
                   textAnchor="middle"
                   letterSpacing="2"
                 >
