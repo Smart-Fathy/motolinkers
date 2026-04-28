@@ -8,13 +8,43 @@ type DriveType = "ev" | "reev" | "phev";
 type Origin = "cn" | "ae";
 type Payment = "usd" | "bank";
 
-const TYPE_RATES: Record<DriveType, number> = { ev: 0.17, reev: 0.27, phev: 0.58 };
-const ORIGIN_FREIGHT: Record<Origin, { freight: number; days: number }> = {
-  cn: { freight: 4025, days: 45 },
-  ae: { freight: 2900, days: 28 },
+export type CalculatorConfig = {
+  egp_rate: number;
+  freight_cn: number;
+  freight_ae: number;
+  transit_cn: number;
+  transit_ae: number;
+  tax_ev: number;
+  tax_reev: number;
+  tax_phev: number;
+  vat: number;
+  insurance_rate: number;
+  clearance_usd: number;
+  inland_delivery_usd: number;
+  consulting_fee_pct: number;
+  payment_usd_fee: number;
+  payment_bank_fee: number;
 };
-const PAYMENT_FEES: Record<Payment, number> = { usd: 0.03, bank: 0.015 };
-const EGP_RATE = 50;
+
+// Schema defaults — mirrors `supabase/schema.sql` calculator_config row, used
+// as a fallback if the live config can't be loaded.
+export const DEFAULT_CALCULATOR_CONFIG: CalculatorConfig = {
+  egp_rate: 51.3,
+  freight_cn: 4025,
+  freight_ae: 2900,
+  transit_cn: 45,
+  transit_ae: 28,
+  tax_ev: 0.17,
+  tax_reev: 0.27,
+  tax_phev: 0.58,
+  vat: 0.14,
+  insurance_rate: 0.015,
+  clearance_usd: 1200,
+  inland_delivery_usd: 350,
+  consulting_fee_pct: 0.04,
+  payment_usd_fee: 0.03,
+  payment_bank_fee: 0.015,
+};
 
 const STEPS = [
   { n: 1, label: "Vehicle" },
@@ -27,6 +57,7 @@ const STEPS = [
 function formatUSD(n: number) {
   return "$" + Math.round(n).toLocaleString("en-US");
 }
+const pct = (n: number, digits = 0) => `${(n * 100).toFixed(digits)}%`;
 
 interface Result {
   fob: number;
@@ -47,7 +78,25 @@ interface Result {
   typeRate: number;
 }
 
-export default function Calculator() {
+export default function Calculator({
+  config = DEFAULT_CALCULATOR_CONFIG,
+}: {
+  config?: CalculatorConfig;
+}) {
+  const typeRates: Record<DriveType, number> = {
+    ev: config.tax_ev,
+    reev: config.tax_reev,
+    phev: config.tax_phev,
+  };
+  const originFreight: Record<Origin, { freight: number; days: number }> = {
+    cn: { freight: config.freight_cn, days: config.transit_cn },
+    ae: { freight: config.freight_ae, days: config.transit_ae },
+  };
+  const paymentFees: Record<Payment, number> = {
+    usd: config.payment_usd_fee,
+    bank: config.payment_bank_fee,
+  };
+
   const [step, setStep] = useState(1);
   const [carName, setCarName] = useState("BYD Sealion 06 EV 605 PLUS");
   const [fob, setFob] = useState("26500");
@@ -81,18 +130,18 @@ export default function Calculator() {
       return;
     }
     const f = parseFloat(fob) || 0;
-    const fee = PAYMENT_FEES[payment];
-    const rate = TYPE_RATES[type];
-    const { freight, days } = ORIGIN_FREIGHT[origin];
+    const fee = paymentFees[payment];
+    const rate = typeRates[type];
+    const { freight, days } = originFreight[origin];
 
     const paymentFeeUSD = f * fee;
-    const insurance = (f + freight) * 0.015;
+    const insurance = (f + freight) * config.insurance_rate;
     const cifBase = f + freight + insurance;
     const customsDuty = cifBase * rate;
-    const vat = (cifBase + customsDuty) * 0.14;
-    const clearance = 1200;
-    const inlandDelivery = 350;
-    const consultingFee = f * 0.04;
+    const vat = (cifBase + customsDuty) * config.vat;
+    const clearance = config.clearance_usd;
+    const inlandDelivery = config.inland_delivery_usd;
+    const consultingFee = f * config.consulting_fee_pct;
     const totalUSD =
       f +
       paymentFeeUSD +
@@ -115,7 +164,7 @@ export default function Calculator() {
       inlandDelivery,
       consultingFee,
       totalUSD,
-      totalEGP: totalUSD * EGP_RATE,
+      totalEGP: totalUSD * config.egp_rate,
       days,
       carName: carName.trim() || "Your vehicle",
       origin,
@@ -225,14 +274,14 @@ export default function Calculator() {
             <h3>What kind of drivetrain?</h3>
             <p className="hint">
               The Egyptian tariff structure rewards electrification. Pure EVs
-              are taxed at 17%, hybrids significantly higher.
+              are taxed at {pct(config.tax_ev)}, hybrids significantly higher.
             </p>
             <div className="choices">
               {(
                 [
-                  { v: "ev", icon: "⚡", title: "Pure Electric (EV)", rate: "17%" },
-                  { v: "reev", icon: "🔋", title: "Range Extended (REEV)", rate: "27%" },
-                  { v: "phev", icon: "🔌", title: "Plug-in Hybrid (PHEV)", rate: "58%" },
+                  { v: "ev", icon: "⚡", title: "Pure Electric (EV)", rate: pct(config.tax_ev) },
+                  { v: "reev", icon: "🔋", title: "Range Extended (REEV)", rate: pct(config.tax_reev) },
+                  { v: "phev", icon: "🔌", title: "Plug-in Hybrid (PHEV)", rate: pct(config.tax_phev) },
                 ] as const
               ).map((c) => (
                 <button
@@ -293,7 +342,7 @@ export default function Calculator() {
                 <span className="choice__icon">🇨🇳</span>
                 <span className="choice__title">China</span>
                 <span className="choice__meta">
-                  Nansha → Alexandria · <strong>$4,025</strong> · 45 days
+                  Nansha → Alexandria · <strong>{formatUSD(config.freight_cn)}</strong> · {config.transit_cn} days
                 </span>
               </button>
               <button
@@ -304,7 +353,7 @@ export default function Calculator() {
                 <span className="choice__icon">🇦🇪</span>
                 <span className="choice__title">United Arab Emirates</span>
                 <span className="choice__meta">
-                  Jebel Ali → Alexandria · <strong>$2,900</strong> · 28 days
+                  Jebel Ali → Alexandria · <strong>{formatUSD(config.freight_ae)}</strong> · {config.transit_ae} days
                 </span>
               </button>
             </div>
@@ -352,7 +401,7 @@ export default function Calculator() {
                 <span className="choice__icon">💵</span>
                 <span className="choice__title">USD Transfer</span>
                 <span className="choice__meta">
-                  Margin <strong>+3%</strong> on FOB
+                  Margin <strong>+{pct(config.payment_usd_fee, 1)}</strong> on FOB
                 </span>
               </button>
               <button
@@ -363,7 +412,7 @@ export default function Calculator() {
                 <span className="choice__icon">🏦</span>
                 <span className="choice__title">Bank Transfer</span>
                 <span className="choice__meta">
-                  Margin <strong>+1.5%</strong> on FOB
+                  Margin <strong>+{pct(config.payment_bank_fee, 1)}</strong> on FOB
                 </span>
               </button>
             </div>
@@ -390,7 +439,7 @@ export default function Calculator() {
             <h3>Your true landed cost.</h3>
             <p className="hint">
               All figures in USD unless noted. EGP conversion uses a live-rate
-              caveat of ≈ 50 EGP / USD — refresh on the day of transfer.
+              caveat of ≈ {config.egp_rate.toFixed(2)} EGP / USD — refresh on the day of transfer.
             </p>
 
             <div className="results">
@@ -439,14 +488,14 @@ export default function Calculator() {
                     />
                     <Row l="Ocean Freight" v={formatUSD(result.freight)} />
                     <Row
-                      l="Marine Insurance (~1.5%)"
+                      l={`Marine Insurance (~${pct(config.insurance_rate, 1)})`}
                       v={formatUSD(result.insurance)}
                     />
                     <Row
                       l={`Customs Duty (${(result.typeRate * 100).toFixed(0)}%)`}
                       v={formatUSD(result.customsDuty)}
                     />
-                    <Row l="VAT (14%)" v={formatUSD(result.vat)} />
+                    <Row l={`VAT (${pct(config.vat)})`} v={formatUSD(result.vat)} />
                     <Row
                       l="Clearance & ACI / Nafeza"
                       v={formatUSD(result.clearance)}
@@ -456,7 +505,7 @@ export default function Calculator() {
                       v={formatUSD(result.inlandDelivery)}
                     />
                     <Row
-                      l="MotoLinkers Fee (4%)"
+                      l={`MotoLinkers Fee (${pct(config.consulting_fee_pct)})`}
                       v={formatUSD(result.consultingFee)}
                     />
                     <Row
