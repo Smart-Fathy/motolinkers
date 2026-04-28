@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const LINKS = [
-  { href: "#fleet", label: "Fleet" },
-  { href: "#calculator", label: "Calculator" },
-  { href: "#routes", label: "Routes" },
-  { href: "#process", label: "Process" },
-  { href: "#words", label: "Voices" },
+  { href: "/vehicles", label: "Vehicles" },
+  { href: "/how-it-works", label: "How it Works" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
+  { href: "/news", label: "News" },
 ];
 
 export default function Navbar() {
@@ -28,18 +29,18 @@ export default function Navbar() {
         id="nav"
         aria-label="Primary"
       >
-        <a href="#" className="nav__logo" data-hover>
+        <Link href="/" className="nav__logo" data-hover>
           <span className="nav__logo-mark" aria-hidden="true" />
           Moto<em>Linkers</em>
-        </a>
+        </Link>
         <div className="nav__links">
           {LINKS.map((l) => (
-            <a key={l.href} href={l.href} className="nav__link" data-hover>
+            <Link key={l.href} href={l.href} className="nav__link" data-hover>
               {l.label}
-            </a>
+            </Link>
           ))}
         </div>
-        <a href="#calculator" className="nav__cta" data-hover>
+        <Link href="/calculator" className="nav__cta" data-hover>
           Import a vehicle
           <svg
             width="14"
@@ -51,7 +52,7 @@ export default function Navbar() {
           >
             <path d="M5 12h14M13 6l6 6-6 6" />
           </svg>
-        </a>
+        </Link>
         <button
           className="nav__menu"
           id="menuBtn"
@@ -87,29 +88,29 @@ export default function Navbar() {
         </button>
         <ul className="menu-panel__list">
           <li>
-            <a href="#fleet" onClick={() => setOpen(false)}>
+            <Link href="/vehicles" onClick={() => setOpen(false)}>
               The <em>Fleet</em>
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#calculator" onClick={() => setOpen(false)}>
-              True <em>cost</em>
-            </a>
-          </li>
-          <li>
-            <a href="#routes" onClick={() => setOpen(false)}>
-              Trade <em>lanes</em>
-            </a>
-          </li>
-          <li>
-            <a href="#process" onClick={() => setOpen(false)}>
+            <Link href="/how-it-works" onClick={() => setOpen(false)}>
               How it <em>works</em>
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#words" onClick={() => setOpen(false)}>
-              <em>Voices</em>
-            </a>
+            <Link href="/about" onClick={() => setOpen(false)}>
+              <em>About</em>
+            </Link>
+          </li>
+          <li>
+            <Link href="/contact" onClick={() => setOpen(false)}>
+              Get in <em>touch</em>
+            </Link>
+          </li>
+          <li>
+            <Link href="/news" onClick={() => setOpen(false)}>
+              <em>News</em>
+            </Link>
           </li>
         </ul>
       </div>

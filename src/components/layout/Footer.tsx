@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Footer() {
   return (
     <footer className="foot">
@@ -37,29 +39,34 @@ export default function Footer() {
             <h4>Navigate</h4>
             <ul>
               <li>
-                <a href="#manifesto" data-hover>
+                <Link href="/about" data-hover>
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#fleet" data-hover>
-                  Fleet
-                </a>
+                <Link href="/vehicles" data-hover>
+                  Vehicles
+                </Link>
               </li>
               <li>
-                <a href="#calculator" data-hover>
+                <Link href="/calculator" data-hover>
                   Calculator
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#routes" data-hover>
-                  Routes
-                </a>
+                <Link href="/how-it-works" data-hover>
+                  How it Works
+                </Link>
               </li>
               <li>
-                <a href="#process" data-hover>
-                  Process
-                </a>
+                <Link href="/news" data-hover>
+                  News
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" data-hover>
+                  Contact
+                </Link>
               </li>
             </ul>
           </div>
@@ -68,29 +75,29 @@ export default function Footer() {
             <h4>Brands</h4>
             <ul>
               <li>
-                <a href="#fleet" data-hover>
+                <Link href="/vehicles" data-hover>
                   BYD
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#fleet" data-hover>
+                <Link href="/vehicles" data-hover>
                   Denza
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#fleet" data-hover>
+                <Link href="/vehicles" data-hover>
                   Avatr
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#fleet" data-hover>
+                <Link href="/vehicles" data-hover>
                   Deepal
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#fleet" data-hover>
+                <Link href="/vehicles" data-hover>
                   Zeekr
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -101,19 +108,19 @@ export default function Footer() {
               <li style={{ opacity: 0.85 }}>Sun – Thu</li>
               <li style={{ opacity: 0.85 }}>11:00 – 23:00 EET</li>
               <li style={{ marginTop: ".5rem" }}>
-                <a href="#calculator" data-hover>
+                <Link href="/contact" data-hover>
                   Subscribe
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" data-hover>
+                <Link href="/faq" data-hover>
                   FAQs
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" data-hover>
+                <Link href="/privacy" data-hover>
                   Privacy
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -122,15 +129,12 @@ export default function Footer() {
         <div className="foot__bottom">
           <div>© 2026 MotoLinkers · All rights reserved</div>
           <div className="foot__legal">
-            <a href="#" data-hover>
+            <Link href="/terms" data-hover>
               Terms
-            </a>
-            <a href="#" data-hover>
+            </Link>
+            <Link href="/privacy" data-hover>
               Privacy
-            </a>
-            <a href="#" data-hover>
-              Cookies
-            </a>
+            </Link>
           </div>
         </div>
       </div>

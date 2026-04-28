@@ -16,11 +16,11 @@ export default function CTA() {
             <span className="ar">كل خطوة موثّقة.</span>
           </Reveal>
           <div className="cta__ctas">
-            <Button href="#calculator" variant="primary" withArrow="diagonal">
+            <Button href="/contact" variant="primary" withArrow="diagonal">
               Start your import plan
             </Button>
-            <Button href="mailto:info@motolinkers.com" variant="ghost">
-              Talk to a consultant
+            <Button href="/calculator" variant="ghost">
+              Run the calculator
             </Button>
           </div>
         </div>
