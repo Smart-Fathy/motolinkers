@@ -11,11 +11,15 @@ import CTA from "@/components/home/CTA";
 import HomeAnimations from "@/components/home/HomeAnimations";
 import SmoothAnchors from "@/components/layout/SmoothAnchors";
 import { getAllVehicles } from "@/lib/repositories/vehicles";
+import { getCalculatorConfig } from "@/lib/repositories/calculator";
 
 export const revalidate = 300; // 5 min ISR
 
 export default async function Home() {
-  const vehicles = await getAllVehicles();
+  const [vehicles, calcConfig] = await Promise.all([
+    getAllVehicles(),
+    getCalculatorConfig(),
+  ]);
 
   return (
     <>
@@ -23,7 +27,7 @@ export default async function Home() {
       <Marquee />
       <Manifesto />
       <Fleet vehicles={vehicles} />
-      <Calculator />
+      <Calculator config={calcConfig} />
       <Routes />
       <Process />
       <Testimonials />

@@ -2,12 +2,6 @@ import type { Metadata } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import Grain from "@/components/layout/Grain";
-import CustomCursor from "@/components/layout/CustomCursor";
-import Loader from "@/components/layout/Loader";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
@@ -78,12 +72,7 @@ export default function RootLayout({
             __html: JSON.stringify(organizationJsonLd),
           }}
         />
-        <Grain />
-        <CustomCursor />
-        <Loader />
-        <Navbar />
         {children}
-        <Footer />
       </body>
     </html>
   );
