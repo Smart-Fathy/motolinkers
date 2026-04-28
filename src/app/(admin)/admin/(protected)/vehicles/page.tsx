@@ -15,7 +15,9 @@ export default async function VehiclesListPage() {
   const supabase = await createClient();
   const { data: vehicles, error } = await supabase
     .from("vehicles")
-    .select("id, slug, name, origin, type, price_egp, is_published, is_featured")
+    .select(
+      "id, slug, name, brand, origin, type, body, price_egp, image_url, is_published, is_featured",
+    )
     .order("created_at", { ascending: false });
 
   return (
@@ -40,9 +42,12 @@ export default async function VehiclesListPage() {
         <table className="adm__table">
           <thead>
             <tr>
+              <th></th>
               <th>Name</th>
+              <th>Brand</th>
               <th>Origin</th>
-              <th>Type</th>
+              <th>Power train</th>
+              <th>Body</th>
               <th>Price (EGP)</th>
               <th>Published</th>
               <th>Actions</th>
@@ -51,6 +56,18 @@ export default async function VehiclesListPage() {
           <tbody>
             {vehicles.map((v) => (
               <tr key={v.id}>
+                <td style={{ width: "60px" }}>
+                  {v.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={v.image_url}
+                      alt=""
+                      className="adm__thumb adm__thumb--row"
+                    />
+                  ) : (
+                    <div className="adm__thumb adm__thumb--row adm__thumb--empty" />
+                  )}
+                </td>
                 <td>
                   <Link href={`/admin/vehicles/${v.id}/edit`}>{v.name}</Link>
                   {v.is_featured && (
@@ -59,8 +76,10 @@ export default async function VehiclesListPage() {
                     </span>
                   )}
                 </td>
+                <td>{v.brand ?? "—"}</td>
                 <td>{v.origin.toUpperCase()}</td>
                 <td>{v.type.toUpperCase()}</td>
+                <td>{v.body ? v.body.toUpperCase() : "—"}</td>
                 <td>{fmtEgp(v.price_egp)}</td>
                 <td>
                   <span className={`adm__pill adm__pill--${v.is_published ? "on" : "off"}`}>

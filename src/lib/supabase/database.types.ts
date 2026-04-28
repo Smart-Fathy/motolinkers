@@ -20,8 +20,21 @@ export interface Database {
           id: string;
           slug: string;
           name: string;
+          brand: string | null;
+          model: string | null;
           origin: "cn" | "ae";
           type: "ev" | "reev" | "phev" | "hybrid";
+          body:
+            | "sedan"
+            | "suv"
+            | "hatchback"
+            | "coupe"
+            | "wagon"
+            | "pickup"
+            | "mpv"
+            | "convertible"
+            | null;
+          drive_type: "fwd" | "rwd" | "awd" | "4wd" | null;
           year: number;
           price_egp: number;
           price_usd: number | null;
@@ -29,6 +42,7 @@ export interface Database {
           drivetrain: string | null;
           range_km: number | null;
           image_url: string | null;
+          gallery: string[] | null;
           specs: Json;
           is_featured: boolean;
           is_published: boolean;
@@ -37,7 +51,17 @@ export interface Database {
         };
         Insert: Omit<
           Database["public"]["Tables"]["vehicles"]["Row"],
-          "id" | "created_at" | "updated_at" | "specs" | "is_featured" | "is_published"
+          | "id"
+          | "created_at"
+          | "updated_at"
+          | "specs"
+          | "is_featured"
+          | "is_published"
+          | "gallery"
+          | "brand"
+          | "model"
+          | "body"
+          | "drive_type"
         > & {
           id?: string;
           created_at?: string;
@@ -45,6 +69,20 @@ export interface Database {
           specs?: Json;
           is_featured?: boolean;
           is_published?: boolean;
+          gallery?: string[] | null;
+          brand?: string | null;
+          model?: string | null;
+          body?:
+            | "sedan"
+            | "suv"
+            | "hatchback"
+            | "coupe"
+            | "wagon"
+            | "pickup"
+            | "mpv"
+            | "convertible"
+            | null;
+          drive_type?: "fwd" | "rwd" | "awd" | "4wd" | null;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: [];

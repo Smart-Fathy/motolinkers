@@ -166,6 +166,23 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
             </div>
           </aside>
         </div>
+
+        {car.gallery && car.gallery.length > 0 && (
+          <section style={{ marginTop: "3.5rem" }}>
+            <Label>Gallery</Label>
+            <div className="vehicle-detail__gallery">
+              {car.gallery.map((url, i) => (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  key={`${url}-${i}`}
+                  src={url}
+                  alt={`${car.name} — ${i + 1}`}
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
