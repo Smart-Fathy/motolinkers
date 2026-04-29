@@ -47,6 +47,11 @@ function asFeatures(v: unknown): Record<string, string[]> {
   return out;
 }
 
+// Values that look like spec entries but are really placeholders for
+// "unknown" / "not present" — drop them when rendering the public
+// specifications block so the page doesn't say "Sun roof: ?".
+const SPEC_PLACEHOLDERS = new Set(["?", "-", "—", "n/a", "N/A", "na", "NA"]);
+
 function asSpecs(v: unknown): Record<string, string> {
   if (!v || typeof v !== "object" || Array.isArray(v)) return {};
   const out: Record<string, string> = {};
@@ -54,6 +59,7 @@ function asSpecs(v: unknown): Record<string, string> {
     if (typeof value !== "string") continue;
     const t = value.trim();
     if (!t) continue;
+    if (SPEC_PLACEHOLDERS.has(t)) continue;
     out[k] = t;
   }
   return out;

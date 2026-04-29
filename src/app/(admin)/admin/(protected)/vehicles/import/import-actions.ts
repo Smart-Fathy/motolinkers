@@ -385,7 +385,12 @@ function buildSpecsForVariant(
   for (const row of specRows) {
     if (row.mappedTo !== "specs") continue;
     const value = (row.values[offset] ?? "").trim();
-    if (!value || value === "-" || value === "—") continue;
+    if (!value) continue;
+    // Drop placeholder cells — a "?" / "-" entry means "unknown for
+    // this variant", not a real spec value worth surfacing on the
+    // public page.
+    if (value === "?" || value === "-" || value === "—") continue;
+    if (value.toLowerCase() === "n/a" || value.toLowerCase() === "na") continue;
     out[row.label] = value;
   }
   return out;
