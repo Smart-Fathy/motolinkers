@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DeleteButton from "./DeleteButton";
-import SyncAllButton from "./SyncAllButton";
+import EditableCell from "./EditableCell";
 import SortSelect from "./SortSelect";
+import SyncAllButton from "./SyncAllButton";
 
 export const metadata = { title: "Vehicles — MotoLinkers Admin" };
 
@@ -12,6 +13,27 @@ const fmtEgp = (n: number) =>
     currency: "EGP",
     maximumFractionDigits: 0,
   }).format(n);
+
+const ORIGIN_OPTIONS = [
+  { value: "cn", label: "CN" },
+  { value: "ae", label: "AE" },
+];
+const POWERTRAIN_OPTIONS = [
+  { value: "ev", label: "EV" },
+  { value: "reev", label: "REEV" },
+  { value: "phev", label: "PHEV" },
+  { value: "hybrid", label: "HYBRID" },
+];
+const BODY_OPTIONS = [
+  { value: "sedan", label: "Sedan" },
+  { value: "suv", label: "SUV" },
+  { value: "hatchback", label: "Hatchback" },
+  { value: "coupe", label: "Coupe" },
+  { value: "wagon", label: "Wagon" },
+  { value: "pickup", label: "Pickup" },
+  { value: "mpv", label: "MPV" },
+  { value: "convertible", label: "Convertible" },
+];
 
 type SortKey =
   | "newest"
@@ -125,22 +147,77 @@ export default async function VehiclesListPage({
                   )}
                 </td>
                 <td>
-                  <Link href={`/admin/vehicles/${v.id}/edit`}>{v.name}</Link>
+                  <EditableCell
+                    id={v.id}
+                    field="name"
+                    kind="text"
+                    value={v.name}
+                  />
                   {v.is_featured && (
-                    <span className="adm__pill adm__pill--on" style={{ marginLeft: ".5rem" }}>
+                    <span
+                      className="adm__pill adm__pill--on"
+                      style={{ marginLeft: ".5rem" }}
+                    >
                       ★
                     </span>
                   )}
                 </td>
-                <td>{v.brand ?? "—"}</td>
-                <td>{v.origin.toUpperCase()}</td>
-                <td>{v.type.toUpperCase()}</td>
-                <td>{v.body ? v.body.toUpperCase() : "—"}</td>
-                <td>{fmtEgp(v.price_egp)}</td>
                 <td>
-                  <span className={`adm__pill adm__pill--${v.is_published ? "on" : "off"}`}>
-                    {v.is_published ? "Live" : "Draft"}
-                  </span>
+                  <EditableCell
+                    id={v.id}
+                    field="brand"
+                    kind="text"
+                    value={v.brand}
+                    placeholder="Brand"
+                  />
+                </td>
+                <td>
+                  <EditableCell
+                    id={v.id}
+                    field="origin"
+                    kind="select"
+                    value={v.origin}
+                    options={ORIGIN_OPTIONS}
+                  />
+                </td>
+                <td>
+                  <EditableCell
+                    id={v.id}
+                    field="type"
+                    kind="select"
+                    value={v.type}
+                    options={POWERTRAIN_OPTIONS}
+                  />
+                </td>
+                <td>
+                  <EditableCell
+                    id={v.id}
+                    field="body"
+                    kind="select"
+                    value={v.body}
+                    options={BODY_OPTIONS}
+                    allowEmpty
+                    emptyLabel="—"
+                  />
+                </td>
+                <td>
+                  <EditableCell
+                    id={v.id}
+                    field="price_egp"
+                    kind="number"
+                    value={v.price_egp}
+                    display={(n) => (typeof n === "number" ? fmtEgp(n) : "—")}
+                  />
+                </td>
+                <td>
+                  <EditableCell
+                    id={v.id}
+                    field="is_published"
+                    kind="toggle"
+                    value={v.is_published}
+                    onLabel="Live"
+                    offLabel="Draft"
+                  />
                 </td>
                 <td>
                   <div className="adm__table-actions">
