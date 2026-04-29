@@ -255,3 +255,44 @@
 .adm__gallery-mini--accent:hover:not(:disabled){
   background:rgba(201,168,76,.10); border-color:var(--volt);
 }
+
+/* Inline-editable table cells */
+.adm__cell-edit{
+  display:inline-flex; align-items:center;
+  border-radius:6px;
+  transition:background .15s, outline-color .15s;
+}
+.adm__cell-display{
+  background:transparent; border:none;
+  color:inherit; font:inherit; text-align:left;
+  padding:.2rem .4rem; margin:-.2rem -.4rem;
+  cursor:text; max-width:100%;
+  min-width:1.5em;
+}
+.adm__cell-display:hover{
+  background:rgba(232,208,140,.08);
+  outline:1px dashed rgba(232,208,140,.25);
+}
+.adm__cell-input{
+  width:100%; min-width:6rem;
+  padding:.3rem .5rem; border-radius:6px;
+  background:rgba(238,232,220,.06); border:1px solid var(--volt);
+  color:var(--bone); font:inherit;
+  outline:none;
+}
+.adm__cell-select{
+  padding:.3rem .5rem; border-radius:6px;
+  background:rgba(238,232,220,.06); border:1px solid var(--line-strong);
+  color:var(--bone); font:inherit; cursor:pointer;
+  font-family:var(--ff-sans);
+}
+.adm__cell-select:hover{border-color:var(--volt)}
+.adm__cell-select:focus{outline:none; border-color:var(--volt)}
+.adm__cell-toggle{
+  cursor:pointer; border:1px solid transparent;
+  transition:transform .15s, opacity .15s;
+}
+.adm__cell-toggle:hover:not(:disabled){
+  border-color:var(--line-strong); transform:translateY(-1px);
+}
+.adm__cell-toggle:disabled{opacity:.6; cursor:wait}
