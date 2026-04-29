@@ -1091,6 +1091,115 @@ section{position:relative}
 }
 .vehicle-detail__gallery img:hover{transform:scale(1.02)}
 
+/* =======================================================================
+   VEHICLE DETAIL — features
+======================================================================= */
+.vehicle-detail__features{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+  gap:1.6rem 2rem; margin-top:1.2rem;
+}
+.vehicle-detail__features-group h3{
+  font-family:var(--ff-display); font-weight:400;
+  font-size:1.1rem; color:var(--volt); letter-spacing:-.01em;
+  font-variation-settings:"opsz" 24, "SOFT" 50;
+  margin:0 0 .8rem; padding-bottom:.5rem;
+  border-bottom:1px solid var(--line);
+}
+.vehicle-detail__features-group ul{
+  list-style:none; padding:0; margin:0;
+  display:flex; flex-direction:column; gap:.45rem;
+}
+.vehicle-detail__features-group li{
+  position:relative; padding-left:1.2rem;
+  font-size:.94rem; color:var(--bone); opacity:.85;
+  line-height:1.4;
+}
+.vehicle-detail__features-group li::before{
+  content:""; position:absolute; left:0; top:.5em;
+  width:6px; height:6px; border-radius:50%;
+  background:var(--volt);
+}
+
+/* =======================================================================
+   VEHICLES BROWSER — list view + view toggle
+======================================================================= */
+.vbrowse__view{
+  display:inline-flex; gap:.25rem; padding:.25rem;
+  border:1px solid var(--line); border-radius:8px;
+  background:var(--ink-2);
+}
+.vbrowse__view-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:6px;
+  background:transparent; color:var(--stone);
+  border:none; cursor:pointer;
+  transition:background .15s, color .15s;
+}
+.vbrowse__view-btn:hover{color:var(--bone)}
+.vbrowse__view-btn.is-on{
+  background:rgba(201,168,76,.14); color:var(--volt);
+}
+
+.vbrowse__list{
+  display:flex; flex-direction:column; gap:.85rem;
+}
+.vbrowse__row{
+  display:grid;
+  grid-template-columns:120px 1fr auto;
+  gap:1.2rem; align-items:center;
+  padding:.85rem 1rem;
+  background:var(--ink-3); border:1px solid var(--line);
+  border-radius:14px;
+  transition:transform .25s var(--ease-out), border-color .25s, box-shadow .25s;
+}
+.vbrowse__row:hover{
+  transform:translateY(-2px);
+  border-color:var(--line-strong);
+  box-shadow:0 12px 28px -16px rgba(0,0,0,.55), 0 0 0 1px rgba(201,168,76,.16);
+}
+.vbrowse__row-img{
+  width:120px; aspect-ratio:4/3;
+  background-size:cover; background-position:center;
+  background-color:var(--ink-2);
+  border-radius:10px;
+}
+.vbrowse__row-body{display:flex; flex-direction:column; gap:.35rem; min-width:0}
+.vbrowse__row-titles h3{
+  font-family:var(--ff-display); font-weight:400;
+  font-size:1.1rem; color:var(--bone); margin:0;
+  letter-spacing:-.01em;
+  font-variation-settings:"opsz" 24, "SOFT" 50;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.vbrowse__row-titles p{
+  font-family:var(--ff-mono); font-size:.7rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--stone);
+  margin:.15rem 0 0;
+}
+.vbrowse__row-meta{
+  font-size:.85rem; color:var(--bone); opacity:.65;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.vbrowse__row-price{
+  display:flex; flex-direction:column; align-items:flex-end; gap:.2rem;
+  white-space:nowrap;
+}
+.vbrowse__row-price strong{
+  font-family:var(--ff-display); font-weight:500; font-size:1.05rem;
+  color:var(--volt); letter-spacing:-.01em;
+  font-variation-settings:"opsz" 24, "SOFT" 50;
+}
+.vbrowse__row-cta{
+  font-family:var(--ff-mono); font-size:.7rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--bone); opacity:.65;
+}
+@media (max-width: 700px){
+  .vbrowse__row{grid-template-columns:90px 1fr}
+  .vbrowse__row-price{grid-column:1 / -1; align-items:flex-start; flex-direction:row; gap:1rem}
+  .vbrowse__row-img{width:90px}
+}
+
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}

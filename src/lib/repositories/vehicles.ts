@@ -12,6 +12,7 @@ type VehicleRow = {
   name: string;
   brand: string | null;
   model: string | null;
+  trim: string | null;
   origin: "cn" | "ae";
   type: VehiclePowerTrain;
   body: VehicleBody | null;
@@ -22,15 +23,27 @@ type VehicleRow = {
   drivetrain: string | null;
   image_url: string | null;
   gallery: unknown;
+  features: unknown;
   created_at: string;
 };
 
 const SELECT_PUBLIC =
-  "slug, name, brand, model, origin, type, body, drive_type, year, price_egp, transmission, drivetrain, image_url, gallery, created_at";
+  "slug, name, brand, model, trim, origin, type, body, drive_type, year, price_egp, transmission, drivetrain, image_url, gallery, features, created_at";
 
 function asGallery(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
   return v.filter((x): x is string => typeof x === "string");
+}
+
+function asFeatures(v: unknown): Record<string, string[]> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [k, items] of Object.entries(v as Record<string, unknown>)) {
+    if (!Array.isArray(items)) continue;
+    const list = items.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+    if (list.length > 0) out[k] = list;
+  }
+  return out;
 }
 
 function rowToVehicle(r: VehicleRow): Vehicle {
@@ -46,10 +59,12 @@ function rowToVehicle(r: VehicleRow): Vehicle {
     img: r.image_url ?? "",
     brand: r.brand,
     model: r.model,
+    trim: r.trim,
     body: r.body,
     driveType: r.drive_type,
     powerTrain: r.type,
     gallery: asGallery(r.gallery),
+    features: asFeatures(r.features),
     createdAt: r.created_at,
   };
 }

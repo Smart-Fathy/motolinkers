@@ -10,6 +10,7 @@ create table if not exists public.vehicles (
   name text not null,
   brand text,
   model text,
+  trim text,
   origin text not null check (origin in ('cn', 'ae')),
   type text not null check (type in ('ev', 'reev', 'phev', 'hybrid')),
   body text check (body in ('sedan','suv','hatchback','coupe','wagon','pickup','mpv','convertible')),
@@ -22,6 +23,7 @@ create table if not exists public.vehicles (
   range_km int,
   image_url text,
   gallery jsonb default '[]'::jsonb,
+  features jsonb default '{}'::jsonb,
   specs jsonb default '{}'::jsonb,
   is_featured boolean default false,
   is_published boolean default true,
@@ -32,6 +34,7 @@ create table if not exists public.vehicles (
 create index if not exists vehicles_origin_idx on public.vehicles(origin);
 create index if not exists vehicles_type_idx on public.vehicles(type);
 create index if not exists vehicles_brand_idx on public.vehicles(brand);
+create index if not exists vehicles_trim_idx on public.vehicles(trim);
 create index if not exists vehicles_body_idx on public.vehicles(body);
 create index if not exists vehicles_drive_type_idx on public.vehicles(drive_type);
 create index if not exists vehicles_published_idx on public.vehicles(is_published);

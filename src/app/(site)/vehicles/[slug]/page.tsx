@@ -183,6 +183,24 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
             </div>
           </section>
         )}
+
+        {car.features && Object.keys(car.features).length > 0 && (
+          <section style={{ marginTop: "3.5rem" }}>
+            <Label>Features</Label>
+            <div className="vehicle-detail__features">
+              {Object.entries(car.features).map(([section, items]) => (
+                <div key={section} className="vehicle-detail__features-group">
+                  <h3>{section}</h3>
+                  <ul>
+                    {items.map((item, i) => (
+                      <li key={`${section}-${i}`}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
