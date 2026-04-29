@@ -30,7 +30,8 @@ const SPEC_LABELS: Record<SpecMappedTo, string> = {
   body: "Body",
   origin: "Origin",
   feature: "Feature row",
-  unmapped: "Unmapped (will be dropped)",
+  specs: "Spec sheet (kept)",
+  unmapped: "Empty (dropped)",
 };
 
 export default function ImportWizard({
@@ -187,19 +188,24 @@ export default function ImportWizard({
     const featureRowCount = preview.specRows.filter(
       (r) => r.mappedTo === "feature",
     ).length;
+    const specsRowCount = preview.specRows.filter(
+      (r) => r.mappedTo === "specs",
+    ).length;
     const unmappedCount = preview.specRows.filter(
       (r) => r.mappedTo === "unmapped",
     ).length;
-    const mappedCount = preview.specRows.length - featureRowCount - unmappedCount;
+    const mappedCount =
+      preview.specRows.length - featureRowCount - specsRowCount - unmappedCount;
 
     return (
       <>
         <div className="imp__summary">
           <span>{preview.variantColumns.length} variant columns</span>
-          <span>{mappedCount} mapped specs</span>
+          <span>{mappedCount} mapped to fields</span>
           <span>{featureRowCount} feature rows</span>
+          <span>{specsRowCount} spec-sheet rows</span>
           {unmappedCount > 0 && (
-            <span className="imp__summary--warn">{unmappedCount} unmapped (dropped)</span>
+            <span className="imp__summary--warn">{unmappedCount} empty (dropped)</span>
           )}
         </div>
 

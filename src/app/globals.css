@@ -1108,6 +1108,33 @@ section{position:relative}
 }
 
 /* =======================================================================
+   VEHICLE DETAIL — specifications table
+======================================================================= */
+.vehicle-detail__specs{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));
+  gap:0 2rem;
+  margin:1.2rem 0 0;
+}
+.vehicle-detail__specs-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:1rem;
+  padding:.7rem 0;
+  border-bottom:1px solid var(--line);
+}
+.vehicle-detail__specs-row dt{
+  font-family:var(--ff-mono); font-size:.75rem;
+  letter-spacing:.05em; color:var(--stone);
+  margin:0; padding:0;
+}
+.vehicle-detail__specs-row dd{
+  margin:0; padding:0;
+  font-size:.92rem; color:var(--bone);
+  text-align:right;
+}
+
+/* =======================================================================
    VEHICLES BROWSER — list view + view toggle
 ======================================================================= */
 .vbrowse__view{

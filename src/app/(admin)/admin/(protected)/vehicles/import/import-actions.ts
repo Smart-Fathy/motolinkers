@@ -40,6 +40,7 @@ export type SpecMappedTo =
   | "body"
   | "origin"
   | "feature"
+  | "specs"
   | "unmapped";
 
 export type VariantColumn = {
@@ -111,14 +112,14 @@ function mapLabel(label: string): SpecMappedTo {
     return "price_egp";
   }
   if (l.includes("year") || l.includes("time to market")) return "year";
-  if (
-    l.includes("wltc") ||
-    l.includes("cltc") ||
-    /\brange\b/.test(l) ||
-    l.includes("cruising range")
-  ) {
-    return "range_km";
-  }
+  // Range (km) — only for genuine cruising-range rows. Tighter than
+  // before so "WLTC comprehensive fuel consumption" and "Battery
+  // charging capacity range (%)" don't get pulled in.
+  const isCycleRange =
+    /(wltc|cltc|nedc|epa)/.test(l) && /\brange\b/.test(l) && !l.includes("%");
+  const isExplicitRange =
+    /\bcruising range\b/.test(l) || /^range\s*\(km\)/.test(l);
+  if (isCycleRange || isExplicitRange) return "range_km";
   if (l.includes("gearbox") || l.includes("transmission")) return "transmission";
   if (l.includes("body structure") || /\bbody\b/.test(l)) return "body";
   if (
@@ -130,7 +131,9 @@ function mapLabel(label: string): SpecMappedTo {
     return "drivetrain";
   }
   if (l === "origin" || l.includes("country of origin")) return "origin";
-  return "unmapped";
+  // Anything else with a label is a free-form spec — preserve it in
+  // the `specs` jsonb column rather than dropping.
+  return "specs";
 }
 
 function isFeatureRow(values: string[]): boolean {
@@ -321,8 +324,30 @@ type RowPatch = {
   transmission?: string | null;
   drivetrain?: string | null;
   features?: Record<string, string[]>;
+  specs?: Record<string, string>;
   is_published?: boolean;
 };
+
+// Build the `specs` jsonb object for one variant by walking every row
+// that mapLabel marked as "specs" (free-form non-feature rows we don't
+// have a dedicated column for — curb weight, dimensions, warranty, etc).
+// Only rows with a non-empty cell value for *this* variant are included.
+function buildSpecsForVariant(
+  variant: VariantColumn,
+  variantColumns: VariantColumn[],
+  specRows: SpecRow[],
+): Record<string, string> {
+  const offset = variantColumns.findIndex((v) => v.index === variant.index);
+  if (offset < 0) return {};
+  const out: Record<string, string> = {};
+  for (const row of specRows) {
+    if (row.mappedTo !== "specs") continue;
+    const value = (row.values[offset] ?? "").trim();
+    if (!value || value === "-" || value === "—") continue;
+    out[row.label] = value;
+  }
+  return out;
+}
 
 // Build the features object for one variant by walking every feature row
 // and including the row label under its assigned section when the cell is
@@ -426,6 +451,7 @@ export async function applyImport(payload: ApplyPayload): Promise<ApplyResult> {
 
     const specPatch = buildSpecPatchForVariant(variant, variantColumns, specRows);
     const features = buildFeaturesForVariant(variant, variantColumns, specRows);
+    const specs = buildSpecsForVariant(variant, variantColumns, specRows);
 
     if (decision.kind === "create") {
       // Required fields the schema enforces — fall back from the patch,
@@ -461,6 +487,7 @@ export async function applyImport(payload: ApplyPayload): Promise<ApplyResult> {
         range_km: specPatch.range_km ?? null,
         image_url: null,
         features,
+        specs,
         is_published: false, // import-as-draft; admin reviews before going live
       });
 
@@ -479,7 +506,7 @@ export async function applyImport(payload: ApplyPayload): Promise<ApplyResult> {
         results.push({ columnIndex: variant.index, slug: "", status: "skipped (not found)" });
         continue;
       }
-      const updatePatch: RowPatch = { ...specPatch, features };
+      const updatePatch: RowPatch = { ...specPatch, features, specs };
       if (decision.trim !== null && decision.trim !== undefined) {
         updatePatch.trim = decision.trim;
       } else if (variant.derivedTrim) {
