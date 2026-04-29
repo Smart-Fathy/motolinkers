@@ -23,6 +23,7 @@ type Body = (typeof BODIES)[number];
 type Field =
   | "name"
   | "brand"
+  | "trim"
   | "origin"
   | "type"
   | "body"
@@ -32,6 +33,7 @@ type Field =
 const VALID_FIELDS: ReadonlySet<Field> = new Set([
   "name",
   "brand",
+  "trim",
   "origin",
   "type",
   "body",
@@ -42,6 +44,7 @@ const VALID_FIELDS: ReadonlySet<Field> = new Set([
 type UpdatePayload =
   | { name: string }
   | { brand: string | null }
+  | { trim: string | null }
   | { origin: Origin }
   | { type: PowerTrain }
   | { body: Body | null }
@@ -61,6 +64,10 @@ function validate(
     case "brand": {
       const s = typeof value === "string" ? value.trim() : "";
       return { brand: s ? s : null };
+    }
+    case "trim": {
+      const s = typeof value === "string" ? value.trim() : "";
+      return { trim: s ? s : null };
     }
     case "origin": {
       if (!ORIGINS.includes(value as Origin)) {

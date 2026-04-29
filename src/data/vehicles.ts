@@ -26,10 +26,12 @@ export interface Vehicle {
   // fallback so existing seed data still validates.
   brand?: string | null;
   model?: string | null;
+  trim?: string | null;
   body?: VehicleBody | null;
   driveType?: VehicleDriveType | null;
   powerTrain?: VehiclePowerTrain;
   gallery?: string[];
+  features?: Record<string, string[]>;
   createdAt?: string;
 }
 

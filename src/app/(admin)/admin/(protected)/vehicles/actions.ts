@@ -24,6 +24,7 @@ type VehicleInput = {
   slug: string;
   brand: string | null;
   model: string | null;
+  trim: string | null;
   origin: (typeof ORIGINS)[number];
   type: (typeof TYPES)[number];
   body: (typeof BODIES)[number] | null;
@@ -36,6 +37,7 @@ type VehicleInput = {
   range_km: number | null;
   image_url: string | null;
   gallery: string[];
+  features: Record<string, string[]>;
   is_featured: boolean;
   is_published: boolean;
 };
@@ -100,11 +102,31 @@ function readForm(formData: FormData): VehicleInput | { error: string } {
     return { error: "Gallery payload was malformed." };
   }
 
+  // Features are { sectionName: string[] } shape, JSON-encoded.
+  const features: Record<string, string[]> = {};
+  const featuresRaw = String(formData.get("features") ?? "{}");
+  try {
+    const parsed = JSON.parse(featuresRaw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+        if (!Array.isArray(v)) continue;
+        const list = v
+          .map((x) => (typeof x === "string" ? x.trim() : ""))
+          .filter((x) => x.length > 0);
+        const section = k.trim();
+        if (section && list.length > 0) features[section] = list;
+      }
+    }
+  } catch {
+    return { error: "Features payload was malformed." };
+  }
+
   return {
     name,
     slug,
     brand: optStr("brand"),
     model: optStr("model"),
+    trim: optStr("trim"),
     origin: origin as (typeof ORIGINS)[number],
     type: type as (typeof TYPES)[number],
     body: bodyRaw ? (bodyRaw as (typeof BODIES)[number]) : null,
@@ -119,6 +141,7 @@ function readForm(formData: FormData): VehicleInput | { error: string } {
     range_km: optNum("range_km"),
     image_url: optStr("image_url"),
     gallery,
+    features,
     is_featured: formData.get("is_featured") === "on",
     is_published: formData.get("is_published") === "on",
   };

@@ -35,6 +35,17 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   const [slugTouched, setSlugTouched] = useState(false);
   const [imageUrl, setImageUrl] = useState(vehicle?.image_url ?? "");
   const [gallery, setGallery] = useState<string[]>(vehicle?.gallery ?? []);
+  const [features, setFeatures] = useState<{ section: string; items: string }[]>(
+    () => {
+      const f = (vehicle?.features as Record<string, string[]> | null) ?? {};
+      const entries = Object.entries(f);
+      if (entries.length === 0) return [];
+      return entries.map(([section, items]) => ({
+        section,
+        items: items.join("\n"),
+      }));
+    },
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -152,11 +163,36 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     }
   };
 
+  const featuresAsObject = (): Record<string, string[]> => {
+    const out: Record<string, string[]> = {};
+    for (const { section, items } of features) {
+      const sectionName = section.trim();
+      if (!sectionName) continue;
+      const list = items
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      if (list.length > 0) out[sectionName] = list;
+    }
+    return out;
+  };
+
+  const addFeatureSection = () =>
+    setFeatures((f) => [...f, { section: "", items: "" }]);
+  const removeFeatureSection = (idx: number) =>
+    setFeatures((f) => f.filter((_, i) => i !== idx));
+  const updateFeatureSection = (
+    idx: number,
+    patch: Partial<{ section: string; items: string }>,
+  ) =>
+    setFeatures((f) => f.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
     formData.set("gallery", JSON.stringify(gallery));
+    formData.set("features", JSON.stringify(featuresAsObject()));
     startTransition(async () => {
       const result = isEdit
         ? await updateVehicle(vehicle!.id, formData)
@@ -210,6 +246,16 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
           className="adm__input"
           defaultValue={vehicle?.model ?? ""}
           placeholder="Sealion 06, Tang L…"
+        />
+      </div>
+      <div className="adm__field">
+        <label className="adm__label" htmlFor="trim">Trim</label>
+        <input
+          id="trim"
+          name="trim"
+          className="adm__input"
+          defaultValue={vehicle?.trim ?? ""}
+          placeholder="Pro extended range, Ultra…"
         />
       </div>
       <div className="adm__field">
@@ -421,6 +467,74 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Features */}
+      <div className="adm__field adm__field--full">
+        <label className="adm__label">Features</label>
+        <p className="adm__sub" style={{ margin: "-.2rem 0 .6rem", fontSize: ".82rem" }}>
+          Group features under a section header (e.g.{" "}
+          <em>Driver assistance</em>, <em>Doors & access</em>). One feature per
+          line in each section.
+        </p>
+        {features.length === 0 ? (
+          <p className="adm__sub" style={{ marginBottom: ".6rem" }}>
+            No features yet.
+          </p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: ".75rem" }}>
+            {features.map((row, i) => (
+              <div
+                key={i}
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: 12,
+                  padding: ".85rem",
+                  background: "var(--ink-3)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: ".55rem",
+                }}
+              >
+                <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
+                  <input
+                    className="adm__input"
+                    placeholder="Section name (e.g. Driver assistance)"
+                    value={row.section}
+                    onChange={(e) =>
+                      updateFeatureSection(i, { section: e.target.value })
+                    }
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="adm__btn adm__btn--danger"
+                    onClick={() => removeFeatureSection(i)}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  className="adm__textarea"
+                  placeholder={"One feature per line\nLane keeping\nAdaptive cruise"}
+                  rows={4}
+                  value={row.items}
+                  onChange={(e) =>
+                    updateFeatureSection(i, { items: e.target.value })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          className="adm__btn adm__btn--ghost"
+          style={{ marginTop: ".75rem" }}
+          onClick={addFeatureSection}
+        >
+          + Add section
+        </button>
       </div>
 
       <label className="adm__checkbox">

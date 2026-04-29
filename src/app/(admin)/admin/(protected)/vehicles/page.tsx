@@ -87,7 +87,7 @@ export default async function VehiclesListPage({
   const { data: vehicles, error } = await supabase
     .from("vehicles")
     .select(
-      "id, slug, name, brand, origin, type, body, price_egp, image_url, is_published, is_featured",
+      "id, slug, name, brand, trim, origin, type, body, price_egp, image_url, is_published, is_featured",
     )
     .order(order.column, {
       ascending: order.ascending,
@@ -107,6 +107,9 @@ export default async function VehiclesListPage({
         </div>
         <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
           <SortSelect value={sort} />
+          <Link href="/admin/vehicles/import" className="adm__btn adm__btn--ghost">
+            Import CSV / Sheet
+          </Link>
           <SyncAllButton />
           <Link href="/admin/vehicles/new" className="adm__btn adm__btn--primary">
             + New vehicle
@@ -123,6 +126,7 @@ export default async function VehiclesListPage({
               <th></th>
               <th>Name</th>
               <th>Brand</th>
+              <th>Trim</th>
               <th>Origin</th>
               <th>Power train</th>
               <th>Body</th>
@@ -169,6 +173,15 @@ export default async function VehiclesListPage({
                     kind="text"
                     value={v.brand}
                     placeholder="Brand"
+                  />
+                </td>
+                <td>
+                  <EditableCell
+                    id={v.id}
+                    field="trim"
+                    kind="text"
+                    value={v.trim}
+                    placeholder="Trim"
                   />
                 </td>
                 <td>

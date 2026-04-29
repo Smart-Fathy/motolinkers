@@ -22,6 +22,7 @@ export interface Database {
           name: string;
           brand: string | null;
           model: string | null;
+          trim: string | null;
           origin: "cn" | "ae";
           type: "ev" | "reev" | "phev" | "hybrid";
           body:
@@ -43,6 +44,7 @@ export interface Database {
           range_km: number | null;
           image_url: string | null;
           gallery: string[] | null;
+          features: Record<string, string[]> | null;
           specs: Json;
           is_featured: boolean;
           is_published: boolean;
@@ -58,8 +60,10 @@ export interface Database {
           | "is_featured"
           | "is_published"
           | "gallery"
+          | "features"
           | "brand"
           | "model"
+          | "trim"
           | "body"
           | "drive_type"
         > & {
@@ -70,8 +74,10 @@ export interface Database {
           is_featured?: boolean;
           is_published?: boolean;
           gallery?: string[] | null;
+          features?: Record<string, string[]> | null;
           brand?: string | null;
           model?: string | null;
+          trim?: string | null;
           body?:
             | "sedan"
             | "suv"

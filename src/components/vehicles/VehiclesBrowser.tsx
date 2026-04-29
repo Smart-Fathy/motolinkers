@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import VehicleCard from "@/components/ui/VehicleCard";
 import PriceRange from "./PriceRange";
 import type {
@@ -76,6 +77,7 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
     return [Math.min(...prices), Math.max(...prices)] as [number, number];
   }, [vehicles]);
 
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState<SortKey>("default");
   const [brandSel, setBrandSel] = useState<Set<string>>(new Set());
   const [modelSel, setModelSel] = useState<Set<string>>(new Set());
@@ -274,6 +276,35 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
               ))}
             </select>
           </label>
+          <div className="vbrowse__view" role="group" aria-label="View">
+            <button
+              type="button"
+              className={`vbrowse__view-btn${view === "grid" ? " is-on" : ""}`}
+              onClick={() => setView("grid")}
+              aria-pressed={view === "grid"}
+              title="Grid view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={`vbrowse__view-btn${view === "list" ? " is-on" : ""}`}
+              onClick={() => setView("list")}
+              aria-pressed={view === "list"}
+              title="List view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {filtered.length === 0 ? (
@@ -283,10 +314,16 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
               Clear filters
             </button>
           </p>
-        ) : (
+        ) : view === "grid" ? (
           <div className="vbrowse__grid">
             {filtered.map((car) => (
               <VehicleCard key={car.id} car={car} />
+            ))}
+          </div>
+        ) : (
+          <div className="vbrowse__list">
+            {filtered.map((car) => (
+              <VehicleListRow key={car.id} car={car} />
             ))}
           </div>
         )}
@@ -326,5 +363,38 @@ function Check({
       <input type="checkbox" checked={checked} onChange={onChange} />
       <span>{label}</span>
     </label>
+  );
+}
+
+function VehicleListRow({ car }: { car: Vehicle }) {
+  const subtitle = [car.brand, car.trim ?? car.model, String(car.year)]
+    .filter((s): s is string => Boolean(s))
+    .join(" · ");
+  const meta = [
+    car.body ? car.body.toUpperCase() : null,
+    car.driveType ? car.driveType.toUpperCase() : null,
+    car.drive,
+    car.trans,
+  ]
+    .filter((s): s is string => Boolean(s))
+    .join(" · ");
+  return (
+    <Link href={`/vehicles/${car.id}`} className="vbrowse__row" data-hover>
+      <div
+        className="vbrowse__row-img"
+        style={car.img ? { backgroundImage: `url('${car.img}')` } : undefined}
+      />
+      <div className="vbrowse__row-body">
+        <div className="vbrowse__row-titles">
+          <h3>{car.name}</h3>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+        {meta && <div className="vbrowse__row-meta">{meta}</div>}
+      </div>
+      <div className="vbrowse__row-price">
+        <strong>{formatEgp(car.price)}</strong>
+        <span className="vbrowse__row-cta">View →</span>
+      </div>
+    </Link>
   );
 }
