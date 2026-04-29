@@ -100,41 +100,83 @@ export type ApplyResult =
 function mapLabel(label: string): SpecMappedTo {
   const l = label.toLowerCase().trim();
   if (!l) return "unmapped";
-  if (/^model name|^model\b/.test(l)) return "name";
-  if (l.includes("brand")) return "brand";
-  if (l.includes("trim") || l.includes("edition")) return "trim";
+
+  // Strict label matches — anchored regexes so "Former motor brand"
+  // doesn't get pulled into "brand" the way it did with a substring
+  // check. Rows that don't match here fall through to "specs" and are
+  // preserved in the `specs` jsonb column.
+
+  // Name
+  if (/^model name$/.test(l) || /^name$/.test(l)) return "name";
+
+  // Brand — only when "brand" is the whole label or sits at the start
+  // (not "motor brand", "former motor brand", etc.)
+  if (/^(brand|make|vehicle brand)$/.test(l)) return "brand";
+
+  // Trim / edition
+  if (/^(trim|edition)\b/.test(l)) return "trim";
+
+  // Price
   if (
+    l === "price" ||
     l.includes("manufacturer's guide price") ||
     l.includes("price (yuan)") ||
-    l.includes("price (egp)") ||
-    l === "price"
+    l.includes("price (egp)")
   ) {
     return "price_egp";
   }
-  if (l.includes("year") || l.includes("time to market")) return "year";
-  // Range (km) — only for genuine cruising-range rows. Tighter than
-  // before so "WLTC comprehensive fuel consumption" and "Battery
-  // charging capacity range (%)" don't get pulled in.
+
+  // Year
+  if (
+    /^year\b/.test(l) ||
+    l.includes("time to market") ||
+    /^year of (manufacture|production|release)/.test(l)
+  ) {
+    return "year";
+  }
+
+  // Range (km) — require an unambiguous cycle name + "range" with no
+  // "%" (so battery capacity rows don't match), or an explicit
+  // "cruising range" / "range (km)".
   const isCycleRange =
     /(wltc|cltc|nedc|epa)/.test(l) && /\brange\b/.test(l) && !l.includes("%");
   const isExplicitRange =
     /\bcruising range\b/.test(l) || /^range\s*\(km\)/.test(l);
   if (isCycleRange || isExplicitRange) return "range_km";
-  if (l.includes("gearbox") || l.includes("transmission")) return "transmission";
-  if (l.includes("body structure") || /\bbody\b/.test(l)) return "body";
-  if (
-    l.includes("engine") ||
-    l.includes("motor") ||
-    l.includes("drivetrain") ||
-    l.includes("powertrain")
-  ) {
+
+  // Transmission
+  if (/^(gearbox|transmission)$/.test(l)) return "transmission";
+
+  // Body — only the structural body type, not "body color" etc.
+  if (/^body( structure| type)?$/.test(l)) return "body";
+
+  // Drivetrain notes — match the standalone term, not motor brand /
+  // model rows.
+  if (/^(engine|motor|drivetrain|powertrain)( type)?$/.test(l)) {
     return "drivetrain";
   }
-  if (l === "origin" || l.includes("country of origin")) return "origin";
-  // Anything else with a label is a free-form spec — preserve it in
-  // the `specs` jsonb column rather than dropping.
+
+  // Origin
+  if (/^origin$/.test(l) || /^country of origin$/.test(l)) return "origin";
+
+  // Anything else with a label is a free-form spec — preserved in the
+  // `specs` jsonb column.
   return "specs";
 }
+
+// Glyphs that mark a row as "binary feature row" (yes/no). `?` and
+// `x` cover spreadsheets that use them for "unknown" / "not present".
+// Plain "x" without a real letter context is rare enough that we
+// accept it for both casings.
+const FEATURE_GLYPHS = new Set([
+  "●", "○",
+  "-", "—",
+  "✓", "✗",
+  "?",
+  "x", "X",
+]);
+
+const FEATURE_TRUTHY = new Set(["●", "✓"]);
 
 function isFeatureRow(values: string[]): boolean {
   // A row is a feature row iff every non-empty cell is one of the marker
@@ -144,7 +186,7 @@ function isFeatureRow(values: string[]): boolean {
     const t = v.trim();
     if (t === "") continue;
     nonEmpty++;
-    if (t !== "●" && t !== "○" && t !== "-" && t !== "—") return false;
+    if (!FEATURE_GLYPHS.has(t)) return false;
   }
   return nonEmpty > 0;
 }
@@ -363,7 +405,9 @@ function buildFeaturesForVariant(
   for (const row of specRows) {
     if (row.mappedTo !== "feature") continue;
     const cell = (row.values[offset] ?? "").trim();
-    if (cell !== "●") continue; // only filled dot counts
+    // Only "truthy" markers add the feature for this variant — "?"
+    // means unknown, "○" / "-" / "—" / "✗" / "x" mean not present.
+    if (!FEATURE_TRUTHY.has(cell)) continue;
     const section = row.section ?? "Other";
     if (!out[section]) out[section] = [];
     out[section].push(row.label);
