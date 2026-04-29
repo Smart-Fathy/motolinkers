@@ -222,10 +222,11 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
   );
 }
 
-// Render a spec cell. Binary glyphs (●/✓/yes, ○/✗/no, ?/-/—/n/a) come
-// in from CSV imports as text — translate them to a check, cross, or
-// muted "Unknown" so the page reads as a proper spec sheet instead of
-// "Sun roof: ?".
+// Render a spec cell. Binary glyphs (●/✓/yes vs ○/✗/no/?/-/—/n/a)
+// come in from CSV imports as text — translate them to a check or
+// cross so the page reads as a proper spec sheet. `?` and friends
+// are treated as "No" rather than "unknown" because that's how the
+// source spec-sheets use them in practice.
 function SpecValue({ value }: { value: string }) {
   const t = value.trim();
   const lower = t.toLowerCase();
@@ -236,11 +237,10 @@ function SpecValue({ value }: { value: string }) {
     t === "✗" ||
     t === "x" ||
     t === "X" ||
-    lower === "no";
-  const unknown =
     t === "?" ||
     t === "-" ||
     t === "—" ||
+    lower === "no" ||
     lower === "n/a" ||
     lower === "na";
 
@@ -264,9 +264,6 @@ function SpecValue({ value }: { value: string }) {
         No
       </span>
     );
-  }
-  if (unknown) {
-    return <span className="spec-icon spec-icon--unknown">—</span>;
   }
   return <>{t}</>;
 }

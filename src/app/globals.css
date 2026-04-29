@@ -1140,7 +1140,6 @@ section{position:relative}
 .spec-icon svg{flex-shrink:0}
 .spec-icon--yes{color:var(--volt)}
 .spec-icon--no{color:var(--stone); opacity:.65}
-.spec-icon--unknown{color:var(--stone); opacity:.45; font-family:var(--ff-mono)}
 
 /* =======================================================================
    VEHICLES BROWSER — list view + view toggle
