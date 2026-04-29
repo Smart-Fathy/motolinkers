@@ -32,6 +32,7 @@ export interface Vehicle {
   powerTrain?: VehiclePowerTrain;
   gallery?: string[];
   features?: Record<string, string[]>;
+  specs?: Record<string, string>;
   createdAt?: string;
 }
 
