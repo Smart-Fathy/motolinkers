@@ -81,6 +81,18 @@ export default function ImportWizard({
   const setDecision = (idx: number, next: VariantDecision) =>
     setDecisions((d) => ({ ...d, [idx]: next }));
 
+  const setRowMapping = (rowIndex: number, mappedTo: SpecMappedTo) =>
+    setPreview((p) =>
+      p
+        ? {
+            ...p,
+            specRows: p.specRows.map((r) =>
+              r.rowIndex === rowIndex ? { ...r, mappedTo } : r,
+            ),
+          }
+        : p,
+    );
+
   const apply = () => {
     if (!preview) return;
     setError(null);
@@ -384,7 +396,8 @@ export default function ImportWizard({
 
         <details className="imp__rows-detail">
           <summary>
-            Show all {preview.specRows.length} parsed spec rows
+            Show all {preview.specRows.length} parsed spec rows · click any
+            mapping to override
           </summary>
           <table className="adm__table" style={{ marginTop: "1rem" }}>
             <thead>
@@ -398,7 +411,24 @@ export default function ImportWizard({
               {preview.specRows.map((r) => (
                 <tr key={r.rowIndex}>
                   <td>{r.label}</td>
-                  <td>{SPEC_LABELS[r.mappedTo]}</td>
+                  <td>
+                    <select
+                      value={r.mappedTo}
+                      onChange={(e) =>
+                        setRowMapping(r.rowIndex, e.target.value as SpecMappedTo)
+                      }
+                      className="adm__select"
+                      style={{ padding: ".35rem .5rem", fontSize: ".82rem" }}
+                    >
+                      {(Object.keys(SPEC_LABELS) as SpecMappedTo[])
+                        .filter((k) => k !== "unmapped")
+                        .map((k) => (
+                          <option key={k} value={k}>
+                            {SPEC_LABELS[k]}
+                          </option>
+                        ))}
+                    </select>
+                  </td>
                   <td>{r.section ?? "—"}</td>
                 </tr>
               ))}
