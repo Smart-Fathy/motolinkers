@@ -22,7 +22,10 @@ type Props =
       kind: "text" | "number";
       value: string | number | null;
       placeholder?: string;
-      display?: (v: string | number | null) => string;
+      // Pre-formatted display string (e.g. "EGP 1,500,000"). Must be a
+      // serialisable string, not a function — server components can't
+      // ship a callback across the RSC boundary.
+      displayValue?: string;
     })
   | (Common & {
       kind: "select";
@@ -30,7 +33,6 @@ type Props =
       options: SelectOption[];
       allowEmpty?: boolean;
       emptyLabel?: string;
-      display?: (v: string | null) => string;
     })
   | (Common & {
       kind: "toggle";
@@ -110,7 +112,7 @@ function FreeText({
   kind,
   value,
   placeholder,
-  display,
+  displayValue,
   className,
   pending,
   error,
@@ -119,7 +121,7 @@ function FreeText({
   kind: "text" | "number";
   value: string | number | null;
   placeholder?: string;
-  display?: (v: string | number | null) => string;
+  displayValue?: string;
   className?: string;
   pending: boolean;
   error: string | null;
@@ -165,7 +167,7 @@ function FreeText({
   const cancel = () => setEditing(false);
 
   const shown =
-    display?.(value) ??
+    displayValue ??
     (value === null || value === undefined || value === "" ? "—" : String(value));
 
   if (!editing) {

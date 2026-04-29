@@ -206,7 +206,7 @@ export default async function VehiclesListPage({
                     field="price_egp"
                     kind="number"
                     value={v.price_egp}
-                    display={(n) => (typeof n === "number" ? fmtEgp(n) : "—")}
+                    displayValue={fmtEgp(v.price_egp)}
                   />
                 </td>
                 <td>
