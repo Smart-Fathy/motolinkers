@@ -209,7 +209,9 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
               {Object.entries(car.specs).map(([label, value]) => (
                 <div key={label} className="vehicle-detail__specs-row">
                   <dt>{label}</dt>
-                  <dd>{value}</dd>
+                  <dd>
+                    <SpecValue value={value} />
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -218,6 +220,55 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
       </div>
     </main>
   );
+}
+
+// Render a spec cell. Binary glyphs (●/✓/yes, ○/✗/no, ?/-/—/n/a) come
+// in from CSV imports as text — translate them to a check, cross, or
+// muted "Unknown" so the page reads as a proper spec sheet instead of
+// "Sun roof: ?".
+function SpecValue({ value }: { value: string }) {
+  const t = value.trim();
+  const lower = t.toLowerCase();
+
+  const yes = t === "●" || t === "✓" || lower === "yes";
+  const no =
+    t === "○" ||
+    t === "✗" ||
+    t === "x" ||
+    t === "X" ||
+    lower === "no";
+  const unknown =
+    t === "?" ||
+    t === "-" ||
+    t === "—" ||
+    lower === "n/a" ||
+    lower === "na";
+
+  if (yes) {
+    return (
+      <span className="spec-icon spec-icon--yes" aria-label="Yes">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Yes
+      </span>
+    );
+  }
+  if (no) {
+    return (
+      <span className="spec-icon spec-icon--no" aria-label="No">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <line x1="6" y1="6" x2="18" y2="18" />
+          <line x1="6" y1="18" x2="18" y2="6" />
+        </svg>
+        No
+      </span>
+    );
+  }
+  if (unknown) {
+    return <span className="spec-icon spec-icon--unknown">—</span>;
+  }
+  return <>{t}</>;
 }
 
 function Spec({ label, value }: { label: string; value: string }) {

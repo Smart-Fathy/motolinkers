@@ -1133,6 +1133,14 @@ section{position:relative}
   font-size:.92rem; color:var(--bone);
   text-align:right;
 }
+.spec-icon{
+  display:inline-flex; align-items:center; gap:.4rem;
+  font-family:var(--ff-mono); font-size:.78rem; letter-spacing:.04em;
+}
+.spec-icon svg{flex-shrink:0}
+.spec-icon--yes{color:var(--volt)}
+.spec-icon--no{color:var(--stone); opacity:.65}
+.spec-icon--unknown{color:var(--stone); opacity:.45; font-family:var(--ff-mono)}
 
 /* =======================================================================
    VEHICLES BROWSER — list view + view toggle
