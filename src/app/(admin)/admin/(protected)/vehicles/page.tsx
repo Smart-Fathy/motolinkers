@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import DeleteButton from "./DeleteButton";
 import SyncAllButton from "./SyncAllButton";
+import SortSelect from "./SortSelect";
 
 export const metadata = { title: "Vehicles — MotoLinkers Admin" };
 
@@ -12,14 +13,64 @@ const fmtEgp = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-export default async function VehiclesListPage() {
+type SortKey =
+  | "newest"
+  | "oldest"
+  | "name-asc"
+  | "name-desc"
+  | "price-asc"
+  | "price-desc"
+  | "brand-asc";
+
+const VALID_SORTS: ReadonlySet<SortKey> = new Set([
+  "newest",
+  "oldest",
+  "name-asc",
+  "name-desc",
+  "price-asc",
+  "price-desc",
+  "brand-asc",
+]);
+
+function parseSort(v: string | string[] | undefined): SortKey {
+  const s = Array.isArray(v) ? v[0] : v;
+  return s && VALID_SORTS.has(s as SortKey) ? (s as SortKey) : "newest";
+}
+
+// `nullsFirst: false` on the brand/price orderings keeps rows with a
+// missing value at the bottom instead of bubbling them to the top.
+const ORDER_BY: Record<
+  SortKey,
+  { column: string; ascending: boolean; nullsFirst?: boolean }
+> = {
+  newest: { column: "created_at", ascending: false },
+  oldest: { column: "created_at", ascending: true },
+  "name-asc": { column: "name", ascending: true },
+  "name-desc": { column: "name", ascending: false },
+  "price-asc": { column: "price_egp", ascending: true },
+  "price-desc": { column: "price_egp", ascending: false },
+  "brand-asc": { column: "brand", ascending: true, nullsFirst: false },
+};
+
+export default async function VehiclesListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sort?: string | string[] }>;
+}) {
+  const { sort: sortRaw } = await searchParams;
+  const sort = parseSort(sortRaw);
+  const order = ORDER_BY[sort];
+
   const supabase = await createClient();
   const { data: vehicles, error } = await supabase
     .from("vehicles")
     .select(
       "id, slug, name, brand, origin, type, body, price_egp, image_url, is_published, is_featured",
     )
-    .order("created_at", { ascending: false });
+    .order(order.column, {
+      ascending: order.ascending,
+      nullsFirst: order.nullsFirst,
+    });
 
   return (
     <>
@@ -33,6 +84,7 @@ export default async function VehiclesListPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <SortSelect value={sort} />
           <SyncAllButton />
           <Link href="/admin/vehicles/new" className="adm__btn adm__btn--primary">
             + New vehicle
