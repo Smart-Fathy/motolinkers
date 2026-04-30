@@ -5,6 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { isValidPageSlug, PAGE_REGISTRY } from "./PAGE_REGISTRY";
 import type { PageSlug } from "@/lib/repositories/pages";
 
+// All admin actions return this discriminated union so callers can use
+// `if (!result.ok) setError(result.error)` and TS narrows reliably.
+// (The earlier `{ error } | { ok: true }` shape lost narrowing under
+// Next.js's stricter typecheck — `result.error` came through as
+// `string | undefined`, which `setError(string | null)` rejects.)
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
 // ─── helpers ─────────────────────────────────────────────────────────
 
 function publicPathForSlug(slug: PageSlug): string {
@@ -32,9 +39,9 @@ function clampNum(v: unknown, min: number, max: number, fallback: number): numbe
 
 // ─── page_heroes ─────────────────────────────────────────────────────
 
-export async function updatePageHero(formData: FormData) {
+export async function updatePageHero(formData: FormData): Promise<ActionResult> {
   const slug = String(formData.get("page_slug") ?? "").trim();
-  if (!isValidPageSlug(slug)) return { error: "Unknown page slug." };
+  if (!isValidPageSlug(slug)) return { ok: false, error:"Unknown page slug." };
 
   const image_url = String(formData.get("image_url") ?? "").trim() || null;
   const alt = String(formData.get("alt") ?? "").trim() || null;
@@ -66,10 +73,10 @@ export async function updatePageHero(formData: FormData) {
       },
       { onConflict: "page_slug" },
     );
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error:error.message };
 
   bustPublic(slug);
-  return { ok: true as const };
+  return { ok: true };
 }
 
 // ─── page_sections ───────────────────────────────────────────────────
@@ -118,12 +125,12 @@ async function nextPosition(slug: PageSlug): Promise<number> {
   return data ? data.position + 1 : 0;
 }
 
-export async function createSection(formData: FormData) {
+export async function createSection(formData: FormData): Promise<ActionResult> {
   const slug = String(formData.get("page_slug") ?? "").trim();
-  if (!isValidPageSlug(slug)) return { error: "Unknown page slug." };
+  if (!isValidPageSlug(slug)) return { ok: false, error:"Unknown page slug." };
 
   const type = formData.get("type");
-  if (!isEditableType(type)) return { error: "Unsupported section type." };
+  if (!isEditableType(type)) return { ok: false, error:"Unsupported section type." };
 
   const data = readSectionData(type, formData);
   const position = await nextPosition(slug);
@@ -136,18 +143,18 @@ export async function createSection(formData: FormData) {
     data,
     is_visible: true,
   });
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error:error.message };
 
   bustPublic(slug);
-  return { ok: true as const };
+  return { ok: true };
 }
 
-export async function updateSection(id: string, formData: FormData) {
-  if (!id) return { error: "Missing section id." };
+export async function updateSection(id: string, formData: FormData): Promise<ActionResult> {
+  if (!id) return { ok: false, error:"Missing section id." };
   const slug = String(formData.get("page_slug") ?? "").trim();
-  if (!isValidPageSlug(slug)) return { error: "Unknown page slug." };
+  if (!isValidPageSlug(slug)) return { ok: false, error:"Unknown page slug." };
   const type = formData.get("type");
-  if (!isEditableType(type)) return { error: "Unsupported section type." };
+  if (!isEditableType(type)) return { ok: false, error:"Unsupported section type." };
 
   const data = readSectionData(type, formData);
   const is_visible = formData.get("is_visible") === "on";
@@ -157,22 +164,22 @@ export async function updateSection(id: string, formData: FormData) {
     .from("page_sections")
     .update({ data, is_visible })
     .eq("id", id);
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error:error.message };
 
   bustPublic(slug);
-  return { ok: true as const };
+  return { ok: true };
 }
 
-export async function deleteSection(id: string, slugRaw: string) {
-  if (!id) return { error: "Missing section id." };
-  if (!isValidPageSlug(slugRaw)) return { error: "Unknown page slug." };
+export async function deleteSection(id: string, slugRaw: string): Promise<ActionResult> {
+  if (!id) return { ok: false, error:"Missing section id." };
+  if (!isValidPageSlug(slugRaw)) return { ok: false, error:"Unknown page slug." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("page_sections").delete().eq("id", id);
-  if (error) return { error: error.message };
+  if (error) return { ok: false, error:error.message };
 
   bustPublic(slugRaw);
-  return { ok: true as const };
+  return { ok: true };
 }
 
 // Move a section up or down by swapping positions with its neighbour.
@@ -183,9 +190,9 @@ export async function moveSection(
   id: string,
   slugRaw: string,
   direction: "up" | "down",
-) {
-  if (!id) return { error: "Missing section id." };
-  if (!isValidPageSlug(slugRaw)) return { error: "Unknown page slug." };
+): Promise<ActionResult> {
+  if (!id) return { ok: false, error:"Missing section id." };
+  if (!isValidPageSlug(slugRaw)) return { ok: false, error:"Unknown page slug." };
 
   const supabase = await createClient();
 
@@ -195,7 +202,7 @@ export async function moveSection(
     .eq("id", id)
     .maybeSingle();
   if (currentErr || !current) {
-    return { error: currentErr?.message ?? "Section not found." };
+    return { ok: false, error:currentErr?.message ?? "Section not found." };
   }
 
   const targetCmp = direction === "up" ? "lt" : "gt";
@@ -209,7 +216,7 @@ export async function moveSection(
     .order("position", { ascending: targetOrder })
     .limit(1)
     .maybeSingle();
-  if (!neighbour) return { ok: true as const }; // already at the edge
+  if (!neighbour) return { ok: true }; // already at the edge
 
   // Swap via a sentinel position that no real row uses.
   const SENTINEL = -1;
@@ -224,5 +231,5 @@ export async function moveSection(
     .eq("id", current.id);
 
   bustPublic(slugRaw);
-  return { ok: true as const };
+  return { ok: true };
 }

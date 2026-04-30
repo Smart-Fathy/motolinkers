@@ -42,7 +42,7 @@ export default function HeroEditorForm({ hero }: { hero: Hero }) {
       fd.set("file", file);
       fd.set("page_slug", hero.page_slug);
       const result = await uploadPageImage(fd);
-      if ("error" in result) setError(result.error);
+      if (!result.ok) setError(result.error);
       else setImageUrl(result.url);
     } finally {
       setUploading(false);
@@ -60,7 +60,7 @@ export default function HeroEditorForm({ hero }: { hero: Hero }) {
     fd.set("overlay_opacity", String(overlayOpacity));
     startTransition(async () => {
       const result = await updatePageHero(fd);
-      if ("error" in result) setError(result.error);
+      if (!result.ok) setError(result.error);
       else setSuccess(true);
     });
   }

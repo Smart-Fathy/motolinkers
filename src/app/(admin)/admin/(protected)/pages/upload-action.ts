@@ -4,6 +4,12 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { slugify } from "@/lib/utils";
 import { isValidPageSlug } from "./PAGE_REGISTRY";
 
+// Discriminated union so TS narrows reliably under Next.js strict
+// typecheck. See actions.ts for the same pattern.
+export type UploadResult =
+  | { ok: true; url: string }
+  | { ok: false; error: string };
+
 const MAX_BYTES = 10 * 1024 * 1024;
 
 const ALLOWED_TYPES = new Set([
@@ -26,24 +32,27 @@ function safeFilename(name: string): string {
 // Used by the page-hero editor and the per-section image editor.
 export async function uploadPageImage(
   formData: FormData,
-): Promise<{ url: string } | { error: string }> {
+): Promise<UploadResult> {
   const file = formData.get("file");
   const rawSlug = String(formData.get("page_slug") ?? "").trim();
 
   if (!isValidPageSlug(rawSlug)) {
-    return { error: "Unknown page slug." };
+    return { ok: false, error: "Unknown page slug." };
   }
-  if (!(file instanceof File)) return { error: "No file received." };
+  if (!(file instanceof File)) return { ok: false, error: "No file received." };
   if (!ALLOWED_TYPES.has(file.type)) {
-    return { error: `Unsupported file type: ${file.type || "unknown"}.` };
+    return { ok: false, error: `Unsupported file type: ${file.type || "unknown"}.` };
   }
   if (file.size > MAX_BYTES) {
-    return { error: `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB; max 10 MB).` };
+    return {
+      ok: false,
+      error: `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB; max 10 MB).`,
+    };
   }
 
   const { env } = await getCloudflareContext({ async: true });
   if (!env.IMAGES_BUCKET) {
-    return { error: "IMAGES_BUCKET binding missing in this environment." };
+    return { ok: false, error: "IMAGES_BUCKET binding missing in this environment." };
   }
 
   const filename = safeFilename(file.name);
@@ -55,5 +64,5 @@ export async function uploadPageImage(
 
   const base =
     process.env.NEXT_PUBLIC_R2_PUBLIC_URL ?? "https://images.motolinkers.com";
-  return { url: `${base.replace(/\/$/, "")}/${key}` };
+  return { ok: true, url: `${base.replace(/\/$/, "")}/${key}` };
 }
