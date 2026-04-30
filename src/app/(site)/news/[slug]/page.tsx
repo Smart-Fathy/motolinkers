@@ -13,23 +13,52 @@ export async function generateStaticParams() {
 export async function generateMetadata(
   props: PageProps<"/news/[slug]">,
 ): Promise<Metadata> {
-  const { slug } = await props.params;
-  const article = await getNewsBySlug(slug);
-  if (!article) return { title: "Article — MotoLinkers" };
-  return {
-    title: `${article.title} — MotoLinkers`,
-    description: article.excerpt ?? undefined,
-    openGraph: {
-      title: article.title,
+  try {
+    const { slug } = await props.params;
+    const article = await getNewsBySlug(slug);
+    if (!article) return { title: "Article — MotoLinkers" };
+    const cover = isHttpUrl(article.cover_image_url) ? article.cover_image_url! : undefined;
+    return {
+      title: `${article.title} — MotoLinkers`,
       description: article.excerpt ?? undefined,
-      images: article.cover_image_url ? [article.cover_image_url] : undefined,
-    },
-  };
+      openGraph: {
+        title: article.title,
+        description: article.excerpt ?? undefined,
+        images: cover ? [cover] : undefined,
+      },
+    };
+  } catch (e) {
+    console.error("[news] generateMetadata threw:", e);
+    return { title: "Article — MotoLinkers" };
+  }
 }
 
-function renderBody(md: string) {
-  // Minimal renderer: paragraph splits + bold/italic markdown removed (we keep things simple).
-  return md
+function isHttpUrl(value: string | null | undefined): boolean {
+  if (typeof value !== "string") return false;
+  return /^https?:\/\//i.test(value.trim());
+}
+
+// Format a published_at timestamp without ever throwing — bad/missing
+// values fall back to "" so a single malformed row can't bring the page
+// down with "Invalid time value".
+function safeFormatDate(iso: string | null | undefined): string {
+  if (typeof iso !== "string" || !iso) return "";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  return new Date(t).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function renderBody(md: unknown): string[] {
+  // Minimal renderer: split on blank lines into paragraphs. Coerce
+  // defensively — Supabase columns are typed as `string | null`, but
+  // JSON columns or admin imports occasionally surface other shapes.
+  const text = typeof md === "string" ? md : "";
+  if (!text) return [];
+  return text
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean);
@@ -60,7 +89,7 @@ export default async function NewsArticlePage(
         >
           {article.title}
         </h1>
-        {article.published_at && (
+        {safeFormatDate(article.published_at) && (
           <p
             style={{
               fontFamily: "var(--ff-mono)",
@@ -71,21 +100,17 @@ export default async function NewsArticlePage(
               margin: "0 0 2.5rem",
             }}
           >
-            {new Date(article.published_at).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
+            {safeFormatDate(article.published_at)}
           </p>
         )}
 
-        {article.cover_image_url && (
+        {isHttpUrl(article.cover_image_url) && (
           <div
             style={{
               borderRadius: 18,
               overflow: "hidden",
               aspectRatio: "16 / 9",
-              backgroundImage: `url('${article.cover_image_url}')`,
+              backgroundImage: `url("${encodeURI(article.cover_image_url!)}")`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               marginBottom: "2rem",
@@ -94,7 +119,7 @@ export default async function NewsArticlePage(
         )}
 
         <div className="long-prose">
-          {(article.body_md ? renderBody(article.body_md) : []).map((p, i) => (
+          {renderBody(article.body_md).map((p, i) => (
             <p key={i}>{p}</p>
           ))}
         </div>
