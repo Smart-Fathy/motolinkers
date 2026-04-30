@@ -33,6 +33,28 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
   const car = await getVehicleBySlug(slug);
   if (!car) notFound();
 
+  const motorPs = pickSpec(car.specs, /(motor|engine).*\bps\b|maximum power.*\bps\b|\bps\b/i);
+  const batteryKwh = pickSpec(car.specs, /battery.*(capacity|kwh)|\bkwh\b/i);
+  const seats = pickSpec(car.specs, /^(number of )?seats?\b|seating/i);
+  const topSpeed = pickSpec(car.specs, /top speed|max(imum)? speed/i);
+  const acceleration = pickSpec(car.specs, /0[\s-]?(to|–|—)?\s?100|acceleration/i);
+  const charging = pickSpec(car.specs, /fast charge|dc charg|charging.*(time|min)/i);
+
+  const powerTrainLabel =
+    car.powerTrain === "ev"
+      ? "Pure EV"
+      : car.powerTrain === "reev"
+        ? "Range-extender (REEV)"
+        : car.powerTrain === "phev"
+          ? "Plug-in hybrid"
+          : car.powerTrain === "hybrid"
+            ? "Hybrid"
+            : null;
+
+  const bodyLabel = car.body
+    ? car.body.charAt(0).toUpperCase() + car.body.slice(1)
+    : null;
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -143,8 +165,21 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
                 margin: 0,
               }}
             >
-              <Spec label="Drivetrain" value={car.drive} />
+              {car.rangeKm ? (
+                <Spec label="Range" value={`${car.rangeKm.toLocaleString()} km`} />
+              ) : null}
+              {motorPs ? <Spec label="Motor (Ps)" value={motorPs} /> : null}
+              {powerTrainLabel ? (
+                <Spec label="Power train" value={powerTrainLabel} />
+              ) : null}
+              <Spec label="Drivetrain" value={car.drive || "—"} />
               <Spec label="Transmission" value={car.trans || "—"} />
+              {batteryKwh ? <Spec label="Battery" value={batteryKwh} /> : null}
+              {acceleration ? <Spec label="0–100 km/h" value={acceleration} /> : null}
+              {topSpeed ? <Spec label="Top speed" value={topSpeed} /> : null}
+              {charging ? <Spec label="Fast charge" value={charging} /> : null}
+              {seats ? <Spec label="Seats" value={seats} /> : null}
+              {bodyLabel ? <Spec label="Body" value={bodyLabel} /> : null}
               <Spec label="Year" value={String(car.year)} />
               <Spec
                 label="Origin"
@@ -266,6 +301,21 @@ function SpecValue({ value }: { value: string }) {
     );
   }
   return <>{t}</>;
+}
+
+// Find the first spec whose key matches `pattern` and whose value isn't a
+// binary glyph. Spec keys are free-form imports (e.g. "Maximum motor
+// power (Ps)"), so we match by pattern rather than exact label.
+function pickSpec(specs: Record<string, string> | undefined, pattern: RegExp): string | null {
+  if (!specs) return null;
+  for (const [key, value] of Object.entries(specs)) {
+    if (!pattern.test(key)) continue;
+    const t = value.trim();
+    if (!t) continue;
+    if (/^[●○✓✗xX?\-—]$/.test(t)) continue;
+    return t;
+  }
+  return null;
 }
 
 function Spec({ label, value }: { label: string; value: string }) {

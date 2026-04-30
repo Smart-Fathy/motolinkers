@@ -21,6 +21,7 @@ type VehicleRow = {
   price_egp: number;
   transmission: string | null;
   drivetrain: string | null;
+  range_km: number | null;
   image_url: string | null;
   gallery: unknown;
   features: unknown;
@@ -29,7 +30,7 @@ type VehicleRow = {
 };
 
 const SELECT_PUBLIC =
-  "slug, name, brand, model, trim, origin, type, body, drive_type, year, price_egp, transmission, drivetrain, image_url, gallery, features, specs, created_at";
+  "slug, name, brand, model, trim, origin, type, body, drive_type, year, price_egp, transmission, drivetrain, range_km, image_url, gallery, features, specs, created_at";
 
 function asGallery(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -76,6 +77,7 @@ function rowToVehicle(r: VehicleRow): Vehicle {
     body: r.body,
     driveType: r.drive_type,
     powerTrain: r.type,
+    rangeKm: r.range_km,
     gallery: asGallery(r.gallery),
     features: asFeatures(r.features),
     specs: asSpecs(r.specs),

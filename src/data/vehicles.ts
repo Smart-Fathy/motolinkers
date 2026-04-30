@@ -30,6 +30,7 @@ export interface Vehicle {
   body?: VehicleBody | null;
   driveType?: VehicleDriveType | null;
   powerTrain?: VehiclePowerTrain;
+  rangeKm?: number | null;
   gallery?: string[];
   features?: Record<string, string[]>;
   specs?: Record<string, string>;
