@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import {
   FLEET as STATIC_FLEET,
   type Vehicle,
@@ -87,7 +87,7 @@ function rowToVehicle(r: VehicleRow): Vehicle {
 
 export async function getAllVehicles(): Promise<Vehicle[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("vehicles")
       .select(SELECT_PUBLIC)
@@ -105,7 +105,7 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
 
 export async function getVehicleBySlug(slug: string): Promise<Vehicle | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("vehicles")
       .select(SELECT_PUBLIC)

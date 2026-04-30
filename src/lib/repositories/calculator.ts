@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import {
   DEFAULT_CALCULATOR_CONFIG,
   type CalculatorConfig,
@@ -6,7 +6,7 @@ import {
 
 export async function getCalculatorConfig(): Promise<CalculatorConfig> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("calculator_config")
       .select(
