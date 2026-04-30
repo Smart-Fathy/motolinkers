@@ -10,6 +10,30 @@ import { syncVehicleGallery } from "./sync-action";
 
 type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 
+// Supabase JSONB columns are typed `Json` at the schema level. The admin
+// form expects gallery as `string[]` and features as
+// `Record<string, string[]>`, but a malformed import or an old row can
+// surface other shapes (a bare string, a number, an object instead of an
+// array). Coerce defensively so the form renders instead of throwing
+// "x.join is not a function" out of useState.
+function coerceGallery(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === "string");
+}
+
+function coerceFeatures(v: unknown): Record<string, string[]> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const out: Record<string, string[]> = {};
+  for (const [section, items] of Object.entries(v as Record<string, unknown>)) {
+    if (Array.isArray(items)) {
+      out[section] = items.filter((x): x is string => typeof x === "string");
+    } else if (typeof items === "string" && items.trim()) {
+      out[section] = [items];
+    }
+  }
+  return out;
+}
+
 const BODIES: { value: NonNullable<Vehicle["body"]>; label: string }[] = [
   { value: "sedan", label: "Sedan" },
   { value: "suv", label: "SUV" },
@@ -34,10 +58,12 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   const [slug, setSlug] = useState(vehicle?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
   const [imageUrl, setImageUrl] = useState(vehicle?.image_url ?? "");
-  const [gallery, setGallery] = useState<string[]>(vehicle?.gallery ?? []);
+  const [gallery, setGallery] = useState<string[]>(() =>
+    coerceGallery(vehicle?.gallery),
+  );
   const [features, setFeatures] = useState<{ section: string; items: string }[]>(
     () => {
-      const f = (vehicle?.features as Record<string, string[]> | null) ?? {};
+      const f = coerceFeatures(vehicle?.features);
       const entries = Object.entries(f);
       if (entries.length === 0) return [];
       return entries.map(([section, items]) => ({
