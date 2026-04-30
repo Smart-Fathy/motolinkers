@@ -160,6 +160,57 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["news"]["Insert"]>;
         Relationships: [];
       };
+      page_heroes: {
+        Row: {
+          page_slug: string;
+          image_url: string | null;
+          alt: string | null;
+          height_vh: number;
+          border_radius_px: number;
+          opacity: number;
+          overlay_color: string;
+          overlay_opacity: number;
+          is_enabled: boolean;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["page_heroes"]["Row"]> & {
+          page_slug: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["page_heroes"]["Row"]>;
+        Relationships: [];
+      };
+      page_sections: {
+        Row: {
+          id: string;
+          page_slug: string;
+          position: number;
+          type:
+            | "paragraph"
+            | "image"
+            | "heading"
+            | "rich_text"
+            | "gallery"
+            | "list"
+            | "cta"
+            | "spacer"
+            | "divider"
+            | "embed";
+          data: Json;
+          is_visible: boolean;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["page_sections"]["Row"],
+          "id" | "updated_at" | "is_visible" | "data"
+        > & {
+          id?: string;
+          updated_at?: string;
+          is_visible?: boolean;
+          data?: Json;
+        };
+        Update: Partial<Database["public"]["Tables"]["page_sections"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

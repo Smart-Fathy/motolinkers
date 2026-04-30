@@ -1,17 +1,25 @@
 import type { ReactNode } from "react";
 import Label from "@/components/ui/Label";
+import PageHero from "@/components/layout/PageHero";
+import PageSections from "@/components/cms/PageSections";
+import type { PageHero as PageHeroData, PageSlug } from "@/lib/repositories/pages";
 
 export default function LongPage({
   kicker,
   title,
   children,
+  hero,
+  slug,
 }: {
   kicker: string;
   title: ReactNode;
   children: ReactNode;
+  hero?: PageHeroData | null;
+  slug?: PageSlug;
 }) {
   return (
-    <main style={{ paddingTop: "9rem", paddingBottom: "var(--sp-section)" }}>
+    <main style={{ paddingTop: hero ? 0 : "9rem", paddingBottom: "var(--sp-section)" }}>
+      {hero && <PageHero hero={hero} />}
       <div className="wrap" style={{ maxWidth: 820 }}>
         <Label>{kicker}</Label>
         <h1
@@ -41,6 +49,7 @@ export default function LongPage({
           {children}
         </div>
       </div>
+      {slug && <PageSections slug={slug} />}
     </main>
   );
 }

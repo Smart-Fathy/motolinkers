@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Label from "@/components/ui/Label";
 import ContactForm from "./ContactForm";
+import PageHero from "@/components/layout/PageHero";
+import PageSections from "@/components/cms/PageSections";
+import { getPageHero } from "@/lib/repositories/pages";
 
 export const metadata: Metadata = {
   title: "Contact — MotoLinkers",
@@ -12,12 +15,14 @@ export default async function ContactPage(props: PageProps<"/contact">) {
   const sp = await props.searchParams;
   const vehicleParam = sp?.vehicle;
   const initialVehicle = Array.isArray(vehicleParam) ? vehicleParam[0] : vehicleParam;
+  const hero = await getPageHero("contact");
 
   return (
     <main
       className="calc"
-      style={{ paddingTop: "9rem", minHeight: "100vh" }}
+      style={{ paddingTop: hero ? 0 : "9rem", minHeight: "100vh" }}
     >
+      {hero && <PageHero hero={hero} />}
       <div className="wrap">
         <div className="calc__head">
           <div>
@@ -35,6 +40,7 @@ export default async function ContactPage(props: PageProps<"/contact">) {
 
         <ContactForm initialVehicle={initialVehicle} />
       </div>
+      <PageSections slug="contact" />
     </main>
   );
 }

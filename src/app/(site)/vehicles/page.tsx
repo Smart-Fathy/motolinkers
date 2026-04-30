@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Label from "@/components/ui/Label";
 import VehiclesBrowser from "@/components/vehicles/VehiclesBrowser";
+import PageHero from "@/components/layout/PageHero";
+import PageSections from "@/components/cms/PageSections";
 import { getAllVehicles } from "@/lib/repositories/vehicles";
+import { getPageHero } from "@/lib/repositories/pages";
 
 export const revalidate = 300;
 
@@ -12,9 +15,13 @@ export const metadata: Metadata = {
 };
 
 export default async function VehiclesPage() {
-  const vehicles = await getAllVehicles();
+  const [vehicles, hero] = await Promise.all([
+    getAllVehicles(),
+    getPageHero("vehicles"),
+  ]);
   return (
-    <main style={{ paddingTop: "7rem", paddingBottom: "var(--sp-section)" }}>
+    <main style={{ paddingTop: hero ? 0 : "7rem", paddingBottom: "var(--sp-section)" }}>
+      {hero && <PageHero hero={hero} />}
       <div className="wrap">
         <Label>The Fleet · 2026</Label>
         <h1
@@ -34,6 +41,7 @@ export default async function VehiclesPage() {
         </h1>
         <VehiclesBrowser vehicles={vehicles} />
       </div>
+      <PageSections slug="vehicles" />
     </main>
   );
 }

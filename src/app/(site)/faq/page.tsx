@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import LongPage from "@/components/ui/LongPage";
+import { getPageHero } from "@/lib/repositories/pages";
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "FAQ — MotoLinkers",
   description: "Common questions about importing EVs and hybrids into Egypt.",
 };
 
-export default function FAQPage() {
+export default async function FAQPage() {
+  const hero = await getPageHero("faq");
   return (
     <LongPage
       kicker="Frequently Asked"
@@ -15,6 +19,8 @@ export default function FAQPage() {
           The questions, <em>answered.</em>
         </>
       }
+      hero={hero}
+      slug="faq"
     >
       <h2>How long does an import take?</h2>
       <p>
