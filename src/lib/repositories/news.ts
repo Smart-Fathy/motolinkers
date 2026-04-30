@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 
 export interface NewsItem {
   slug: string;
@@ -11,7 +11,7 @@ export interface NewsItem {
 
 export async function getAllNews(): Promise<NewsItem[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("news")
       .select("slug, title, excerpt, body_md, cover_image_url, published_at")
@@ -30,7 +30,7 @@ export async function getAllNews(): Promise<NewsItem[]> {
 
 export async function getNewsBySlug(slug: string): Promise<NewsItem | null> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("news")
       .select("slug, title, excerpt, body_md, cover_image_url, published_at")
