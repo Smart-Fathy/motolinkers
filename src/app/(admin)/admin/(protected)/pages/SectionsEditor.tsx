@@ -55,7 +55,7 @@ export default function SectionsEditor({
     fd.set("type", type);
     startTransition(async () => {
       const result = await createSection(fd);
-      if ("error" in result) setError(result.error);
+      if (!result.ok) setError(result.error);
       else {
         setAdding(null);
         // Server action revalidates the public path; reload to see
@@ -69,7 +69,7 @@ export default function SectionsEditor({
     clearMessages();
     startTransition(async () => {
       const result = await moveSection(id, slug, direction);
-      if ("error" in result) setError(result.error);
+      if (!result.ok) setError(result.error);
       else window.location.reload();
     });
   }
@@ -79,7 +79,7 @@ export default function SectionsEditor({
     clearMessages();
     startTransition(async () => {
       const result = await deleteSection(id, slug);
-      if ("error" in result) setError(result.error);
+      if (!result.ok) setError(result.error);
       else window.location.reload();
     });
   }
@@ -229,7 +229,7 @@ function SectionCard({
     fd.set("type", section.type);
     startSave(async () => {
       const result = await updateSection(section.id, fd);
-      if ("error" in result) onError(result.error);
+      if (!result.ok) onError(result.error);
       else {
         setEditing(false);
         window.location.reload();
@@ -468,7 +468,7 @@ function ImageFields({
       fd.set("file", file);
       fd.set("page_slug", slug);
       const result = await uploadPageImage(fd);
-      if ("error" in result) onError(result.error);
+      if (!result.ok) onError(result.error);
       else setUrl(result.url);
     } finally {
       setUploading(false);
