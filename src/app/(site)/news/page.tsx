@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Label from "@/components/ui/Label";
+import PageHero from "@/components/layout/PageHero";
+import PageSections from "@/components/cms/PageSections";
 import { getAllNews } from "@/lib/repositories/news";
+import { getPageHero } from "@/lib/repositories/pages";
 
 export const revalidate = 600;
 
@@ -23,10 +26,11 @@ function formatDate(iso: string | null) {
 }
 
 export default async function NewsPage() {
-  const items = await getAllNews();
+  const [items, hero] = await Promise.all([getAllNews(), getPageHero("news")]);
 
   return (
-    <main style={{ paddingTop: "9rem", paddingBottom: "var(--sp-section)" }}>
+    <main style={{ paddingTop: hero ? 0 : "9rem", paddingBottom: "var(--sp-section)" }}>
+      {hero && <PageHero hero={hero} />}
       <div className="wrap">
         <Label>News & Insights</Label>
         <h1
@@ -106,6 +110,7 @@ export default async function NewsPage() {
           </div>
         )}
       </div>
+      <PageSections slug="news" />
     </main>
   );
 }

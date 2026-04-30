@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import LongPage from "@/components/ui/LongPage";
+import { getPageHero } from "@/lib/repositories/pages";
+
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Terms of Service — MotoLinkers",
   description: "Terms and conditions for using motolinkers.com.",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const hero = await getPageHero("terms");
   return (
     <LongPage
       kicker="Legal"
@@ -15,6 +19,8 @@ export default function TermsPage() {
           Terms of <em>Service.</em>
         </>
       }
+      hero={hero}
+      slug="terms"
     >
       <p>Last updated: April 2026.</p>
 

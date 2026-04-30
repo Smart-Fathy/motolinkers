@@ -14,6 +14,8 @@ grant all on public.vehicles to authenticated;
 grant all on public.news to authenticated;
 grant select, delete on public.leads to authenticated;
 grant all on public.calculator_config to authenticated;
+grant all on public.page_heroes to authenticated;
+grant all on public.page_sections to authenticated;
 
 -- 2. Vehicles: admin sees ALL rows (including unpublished), full CRUD.
 drop policy if exists "Admin full access vehicles" on public.vehicles;

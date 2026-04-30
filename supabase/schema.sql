@@ -127,6 +127,53 @@ create policy "Anyone can submit a lead"
   with check (true);
 
 -- =====================================================================
+--  Pages CMS — page_heroes + page_sections (see migrations/004)
+-- =====================================================================
+create table if not exists public.page_heroes (
+  page_slug text primary key,
+  image_url text,
+  alt text,
+  height_vh int default 60 check (height_vh between 20 and 100),
+  border_radius_px int default 0 check (border_radius_px between 0 and 64),
+  opacity numeric(3,2) default 1.00 check (opacity between 0.05 and 1.00),
+  overlay_color text default '#0a0a0a',
+  overlay_opacity numeric(3,2) default 0.35
+    check (overlay_opacity between 0.00 and 1.00),
+  is_enabled boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.page_sections (
+  id uuid primary key default gen_random_uuid(),
+  page_slug text not null,
+  position int not null,
+  type text not null
+    check (type in (
+      'paragraph','image','heading','rich_text',
+      'gallery','list','cta','spacer','divider','embed'
+    )),
+  data jsonb not null default '{}'::jsonb,
+  is_visible boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists page_sections_pos_uq
+  on public.page_sections (page_slug, position);
+
+alter table public.page_heroes enable row level security;
+alter table public.page_sections enable row level security;
+
+drop policy if exists "Public read enabled heroes" on public.page_heroes;
+create policy "Public read enabled heroes"
+  on public.page_heroes for select to anon, authenticated
+  using (is_enabled = true);
+
+drop policy if exists "Public read visible sections" on public.page_sections;
+create policy "Public read visible sections"
+  on public.page_sections for select to anon, authenticated
+  using (is_visible = true);
+
+-- =====================================================================
 --  Seed: 15 vehicles from the reference design
 -- =====================================================================
 insert into public.vehicles (slug, name, origin, type, year, price_egp, transmission, drivetrain, image_url) values
