@@ -103,6 +103,30 @@ export async function getAllVehicles(): Promise<Vehicle[]> {
   }
 }
 
+export async function getFeaturedVehicles(): Promise<Vehicle[]> {
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("vehicles")
+      .select(SELECT_PUBLIC)
+      .eq("is_published", true)
+      .eq("is_featured", true)
+      .order("price_egp", { ascending: false });
+
+    if (error) {
+      console.error("[vehicles] getFeaturedVehicles supabase error:", error);
+      return STATIC_FLEET.filter((v) => v.isFeatured);
+    }
+    if (!data || data.length === 0) {
+      return STATIC_FLEET.filter((v) => v.isFeatured);
+    }
+    return data.map((r) => rowToVehicle(r as unknown as VehicleRow));
+  } catch (e) {
+    console.error("[vehicles] getFeaturedVehicles threw:", e);
+    return STATIC_FLEET.filter((v) => v.isFeatured);
+  }
+}
+
 export async function getVehicleBySlug(slug: string): Promise<Vehicle | null> {
   try {
     const supabase = createPublicClient();

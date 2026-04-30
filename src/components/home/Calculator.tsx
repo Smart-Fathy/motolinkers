@@ -10,6 +10,8 @@ type Payment = "usd" | "bank";
 
 export type CalculatorConfig = {
   egp_rate: number;
+  egp_rate_source: "live" | "manual";
+  egp_rate_fetched_at: string | null;
   freight_cn: number;
   freight_ae: number;
   transit_cn: number;
@@ -30,6 +32,8 @@ export type CalculatorConfig = {
 // as a fallback if the live config can't be loaded.
 export const DEFAULT_CALCULATOR_CONFIG: CalculatorConfig = {
   egp_rate: 51.3,
+  egp_rate_source: "manual",
+  egp_rate_fetched_at: null,
   freight_cn: 4025,
   freight_ae: 2900,
   transit_cn: 45,
@@ -438,8 +442,8 @@ export default function Calculator({
           <div className={`step-panel${step === 5 ? " is-active" : ""}`}>
             <h3>Your true landed cost.</h3>
             <p className="hint">
-              All figures in USD unless noted. EGP conversion uses a live-rate
-              caveat of ≈ {config.egp_rate.toFixed(2)} EGP / USD — refresh on the day of transfer.
+              All figures in USD unless noted. EGP conversion uses{" "}
+              <RateBadge config={config} /> — refresh on the day of transfer.
             </p>
 
             <div className="results">
@@ -543,5 +547,43 @@ function Row({ l, v, total = false }: { l: string; v: string; total?: boolean })
       <span className="l">{l}</span>
       <span className="v">{v}</span>
     </div>
+  );
+}
+
+// Relative time ("12 min ago", "2 h ago", "yesterday") — no Intl.RelativeTime
+// wrangling since we only need a quick human-readable hint.
+function relativeFromNow(iso: string): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "";
+  const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay === 1) return "yesterday";
+  return `${diffDay} days ago`;
+}
+
+function RateBadge({ config }: { config: CalculatorConfig }) {
+  const rate = `≈ ${config.egp_rate.toFixed(2)} EGP / USD`;
+  if (config.egp_rate_source === "live") {
+    const when = config.egp_rate_fetched_at
+      ? relativeFromNow(config.egp_rate_fetched_at)
+      : "";
+    return (
+      <span className="calc__rate">
+        <span className="calc__rate-pill">Live</span>
+        {rate}
+        {when && <span className="calc__rate-when"> · updated {when}</span>}
+      </span>
+    );
+  }
+  return (
+    <span className="calc__rate">
+      {rate}
+      <span className="calc__rate-when"> · admin-set</span>
+    </span>
   );
 }

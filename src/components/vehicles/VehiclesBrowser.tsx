@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import VehicleCard from "@/components/ui/VehicleCard";
 import PriceRange from "./PriceRange";
@@ -32,11 +32,6 @@ const BODIES: { value: VehicleBody; label: string }[] = [
   { value: "sedan", label: "Sedan" },
   { value: "suv", label: "SUV" },
   { value: "hatchback", label: "Hatchback" },
-  { value: "coupe", label: "Coupe" },
-  { value: "wagon", label: "Wagon" },
-  { value: "pickup", label: "Pickup" },
-  { value: "mpv", label: "MPV" },
-  { value: "convertible", label: "Convertible" },
 ];
 
 const DRIVE_TYPES: { value: VehicleDriveType; label: string }[] = [
@@ -84,9 +79,23 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
   const [powerSel, setPowerSel] = useState<Set<VehiclePowerTrain>>(new Set());
   const [bodySel, setBodySel] = useState<Set<VehicleBody>>(new Set());
   const [driveSel, setDriveSel] = useState<Set<VehicleDriveType>>(new Set());
-  const [originSel, setOriginSel] = useState<Set<"cn" | "ae">>(new Set());
   const [price, setPrice] = useState<[number, number]>(priceBounds);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Lock body scroll while the drawer is open, and close on Esc.
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFiltersOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [filtersOpen]);
 
   const toggle = <T,>(set: Set<T>, value: T): Set<T> => {
     const next = new Set(set);
@@ -101,7 +110,6 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
     setPowerSel(new Set());
     setBodySel(new Set());
     setDriveSel(new Set());
-    setOriginSel(new Set());
     setPrice(priceBounds);
   };
 
@@ -115,7 +123,6 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
       }
       if (bodySel.size && (!v.body || !bodySel.has(v.body))) return false;
       if (driveSel.size && (!v.driveType || !driveSel.has(v.driveType))) return false;
-      if (originSel.size && !originSel.has(v.origin)) return false;
       if (v.price < price[0] || v.price > price[1]) return false;
       return true;
     });
@@ -132,7 +139,10 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
       default:
         return out;
     }
-  }, [vehicles, brandSel, modelSel, powerSel, bodySel, driveSel, originSel, price, sort]);
+  }, [vehicles, brandSel, modelSel, powerSel, bodySel, driveSel, price, sort]);
+
+  const priceFilterActive =
+    price[0] !== priceBounds[0] || price[1] !== priceBounds[1];
 
   const activeCount =
     brandSel.size +
@@ -140,22 +150,63 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
     powerSel.size +
     bodySel.size +
     driveSel.size +
-    originSel.size +
-    (price[0] !== priceBounds[0] || price[1] !== priceBounds[1] ? 1 : 0);
+    (priceFilterActive ? 1 : 0);
+
+  type Chip = { key: string; label: string; onRemove: () => void };
+  const chips: Chip[] = [];
+  for (const b of brandSel)
+    chips.push({
+      key: `brand:${b}`,
+      label: b,
+      onRemove: () => setBrandSel((s) => toggle(s, b)),
+    });
+  for (const m of modelSel)
+    chips.push({
+      key: `model:${m}`,
+      label: m,
+      onRemove: () => setModelSel((s) => toggle(s, m)),
+    });
+  for (const p of powerSel) {
+    const meta = POWER_TRAINS.find((x) => x.value === p);
+    chips.push({
+      key: `power:${p}`,
+      label: meta?.label ?? p,
+      onRemove: () => setPowerSel((s) => toggle(s, p)),
+    });
+  }
+  for (const b of bodySel) {
+    const meta = BODIES.find((x) => x.value === b);
+    chips.push({
+      key: `body:${b}`,
+      label: meta?.label ?? b,
+      onRemove: () => setBodySel((s) => toggle(s, b)),
+    });
+  }
+  for (const d of driveSel) {
+    const meta = DRIVE_TYPES.find((x) => x.value === d);
+    chips.push({
+      key: `drive:${d}`,
+      label: meta?.label ?? d,
+      onRemove: () => setDriveSel((s) => toggle(s, d)),
+    });
+  }
+  if (priceFilterActive) {
+    chips.push({
+      key: "price",
+      label: `${formatEgp(price[0])} – ${formatEgp(price[1])}`,
+      onRemove: () => setPrice(priceBounds),
+    });
+  }
 
   return (
     <div className="vbrowse">
       <aside
         className={`vbrowse__panel${filtersOpen ? " is-open" : ""}`}
         aria-label="Filters"
+        aria-hidden={!filtersOpen}
       >
         <div className="vbrowse__panel-head">
           <h2 className="vbrowse__panel-title">Filters</h2>
-          {activeCount > 0 && (
-            <button type="button" className="vbrowse__clear" onClick={clearAll}>
-              Clear ({activeCount})
-            </button>
-          )}
           <button
             type="button"
             className="vbrowse__panel-close"
@@ -166,88 +217,95 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
           </button>
         </div>
 
-        {brands.length > 0 && (
-          <FilterGroup title="Brand">
-            {brands.map((b) => (
+        <div className="vbrowse__panel-body">
+          {brands.length > 0 && (
+            <FilterGroup title="Brand">
+              {brands.map((b) => (
+                <Check
+                  key={b}
+                  label={b}
+                  checked={brandSel.has(b)}
+                  onChange={() => setBrandSel((s) => toggle(s, b))}
+                />
+              ))}
+            </FilterGroup>
+          )}
+
+          {models.length > 0 && (
+            <FilterGroup title="Model">
+              {models.map((m) => (
+                <Check
+                  key={m}
+                  label={m}
+                  checked={modelSel.has(m)}
+                  onChange={() => setModelSel((s) => toggle(s, m))}
+                />
+              ))}
+            </FilterGroup>
+          )}
+
+          <FilterGroup title="Power train">
+            {POWER_TRAINS.map((p) => (
               <Check
-                key={b}
-                label={b}
-                checked={brandSel.has(b)}
-                onChange={() => setBrandSel((s) => toggle(s, b))}
+                key={p.value}
+                label={p.label}
+                checked={powerSel.has(p.value)}
+                onChange={() => setPowerSel((s) => toggle(s, p.value))}
               />
             ))}
           </FilterGroup>
-        )}
 
-        {models.length > 0 && (
-          <FilterGroup title="Model">
-            {models.map((m) => (
+          <FilterGroup title="Body">
+            {BODIES.map((b) => (
               <Check
-                key={m}
-                label={m}
-                checked={modelSel.has(m)}
-                onChange={() => setModelSel((s) => toggle(s, m))}
+                key={b.value}
+                label={b.label}
+                checked={bodySel.has(b.value)}
+                onChange={() => setBodySel((s) => toggle(s, b.value))}
               />
             ))}
           </FilterGroup>
-        )}
 
-        <FilterGroup title="Power train">
-          {POWER_TRAINS.map((p) => (
-            <Check
-              key={p.value}
-              label={p.label}
-              checked={powerSel.has(p.value)}
-              onChange={() => setPowerSel((s) => toggle(s, p.value))}
+          <FilterGroup title="Drive type">
+            {DRIVE_TYPES.map((d) => (
+              <Check
+                key={d.value}
+                label={d.label}
+                checked={driveSel.has(d.value)}
+                onChange={() => setDriveSel((s) => toggle(s, d.value))}
+              />
+            ))}
+          </FilterGroup>
+
+          <FilterGroup title="Price (EGP)">
+            <PriceRange
+              min={priceBounds[0]}
+              max={priceBounds[1]}
+              step={Math.max(1, Math.round((priceBounds[1] - priceBounds[0]) / 200))}
+              value={price}
+              onChange={setPrice}
+              format={formatEgp}
             />
-          ))}
-        </FilterGroup>
+          </FilterGroup>
+        </div>
 
-        <FilterGroup title="Body">
-          {BODIES.map((b) => (
-            <Check
-              key={b.value}
-              label={b.label}
-              checked={bodySel.has(b.value)}
-              onChange={() => setBodySel((s) => toggle(s, b.value))}
-            />
-          ))}
-        </FilterGroup>
-
-        <FilterGroup title="Drive type">
-          {DRIVE_TYPES.map((d) => (
-            <Check
-              key={d.value}
-              label={d.label}
-              checked={driveSel.has(d.value)}
-              onChange={() => setDriveSel((s) => toggle(s, d.value))}
-            />
-          ))}
-        </FilterGroup>
-
-        <FilterGroup title="Origin">
-          <Check
-            label="China"
-            checked={originSel.has("cn")}
-            onChange={() => setOriginSel((s) => toggle(s, "cn"))}
-          />
-          <Check
-            label="UAE"
-            checked={originSel.has("ae")}
-            onChange={() => setOriginSel((s) => toggle(s, "ae"))}
-          />
-        </FilterGroup>
-
-        <FilterGroup title="Price (EGP)">
-          <PriceRange
-            min={priceBounds[0]}
-            max={priceBounds[1]}
-            step={Math.max(1, Math.round((priceBounds[1] - priceBounds[0]) / 200))}
-            value={price}
-            onChange={setPrice}
-            format={formatEgp}
-          />
-        </FilterGroup>
+        <div className="vbrowse__panel-foot">
+          <button
+            type="button"
+            className="vbrowse__clear"
+            onClick={clearAll}
+            disabled={activeCount === 0}
+          >
+            Clear all
+          </button>
+          <button
+            type="button"
+            className="vbrowse__apply"
+            onClick={() => setFiltersOpen(false)}
+          >
+            Show {filtered.length} {filtered.length === 1 ? "result" : "results"}
+          </button>
+        </div>
       </aside>
 
       <div className="vbrowse__main">
@@ -307,6 +365,41 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
           </div>
         </div>
 
+        {chips.length > 0 && (
+          <div className="vbrowse__chips" aria-label="Active filters">
+            {chips.map((c) => (
+              <button
+                type="button"
+                key={c.key}
+                className="vbrowse__chip"
+                onClick={c.onRemove}
+                aria-label={`Remove ${c.label} filter`}
+              >
+                <span>{c.label}</span>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  aria-hidden
+                >
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="6" y1="18" x2="18" y2="6" />
+                </svg>
+              </button>
+            ))}
+            <button
+              type="button"
+              className="vbrowse__chips-clear"
+              onClick={clearAll}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
         {filtered.length === 0 ? (
           <p className="vbrowse__empty">
             No vehicles match these filters.{" "}
@@ -342,7 +435,7 @@ export default function VehiclesBrowser({ vehicles }: { vehicles: Vehicle[] }) {
 
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <details className="vbrowse__group" open>
+    <details className="vbrowse__group">
       <summary>{title}</summary>
       <div className="vbrowse__group-body">{children}</div>
     </details>
