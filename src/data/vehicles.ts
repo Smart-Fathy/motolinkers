@@ -34,6 +34,7 @@ export interface Vehicle {
   gallery?: string[];
   features?: Record<string, string[]>;
   specs?: Record<string, string>;
+  isFeatured?: boolean;
   createdAt?: string;
 }
 
@@ -48,6 +49,7 @@ export const FLEET: Vehicle[] = [
     trans: "CVT",
     drive: "Hybrid",
     img: "https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChxkPmcIg1SAC8aOABS-CaJfeEE991.avif",
+    isFeatured: true,
   },
   {
     id: "denza-d9",
@@ -70,6 +72,7 @@ export const FLEET: Vehicle[] = [
     trans: "CVT",
     drive: "Hybrid · 7-seat",
     img: "https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtlyGe294uAVmSDADGjc-F-DHE533.avif",
+    isFeatured: true,
   },
   {
     id: "leopard-7",
@@ -92,6 +95,7 @@ export const FLEET: Vehicle[] = [
     trans: "Fixed",
     drive: "670 km · Pure EV",
     img: "https://motolinkers.com/wp-content/uploads/2026/04/560x420_c42_autohomecar__ChtpWGknIiyATwyuADJRagq1gp0475.avif",
+    isFeatured: true,
   },
   {
     id: "byd-sealion",
@@ -180,6 +184,7 @@ export const FLEET: Vehicle[] = [
     trans: "Auto",
     drive: "Pure EV · Flagship",
     img: "https://motolinkers.com/wp-content/uploads/2026/02/banner_pc-660x440.jpg",
+    isFeatured: true,
   },
   {
     id: "avatr-07r",

@@ -10,8 +10,14 @@ const FIELDS: {
   name: keyof Config;
   label: string;
   step: string;
+  hint?: string;
 }[] = [
-  { name: "egp_rate", label: "EGP / USD rate", step: "0.01" },
+  {
+    name: "egp_rate",
+    label: "EGP / USD rate",
+    step: "0.01",
+    hint: "Used as a fallback when the live FX API (open.er-api.com) is unreachable. Public calculator otherwise shows the live rate, refreshed hourly.",
+  },
   { name: "freight_cn", label: "Freight — China (USD)", step: "1" },
   { name: "freight_ae", label: "Freight — UAE (USD)", step: "1" },
   { name: "transit_cn", label: "Transit — China (days)", step: "1" },
@@ -62,6 +68,18 @@ export default function CalculatorConfigForm({ config }: { config: Config }) {
             className="adm__input"
             defaultValue={String(config[f.name] ?? "")}
           />
+          {f.hint && (
+            <p
+              style={{
+                margin: ".4rem 0 0",
+                fontSize: ".78rem",
+                color: "var(--stone)",
+                lineHeight: 1.5,
+              }}
+            >
+              {f.hint}
+            </p>
+          )}
         </div>
       ))}
       {error && <div className="adm__error adm__field--full">{error}</div>}

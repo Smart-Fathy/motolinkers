@@ -528,6 +528,16 @@ section{position:relative}
 }
 .step-panel .hint{color:var(--stone);font-size:.92rem;margin:0 0 1.8rem}
 
+.calc__rate{display:inline-flex;align-items:baseline;gap:.4rem;color:var(--bone)}
+.calc__rate-pill{
+  display:inline-block;font-family:var(--ff-mono);font-size:.62rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  padding:.18rem .5rem;border-radius:999px;
+  background:rgba(232,208,140,.14);color:var(--volt);
+  border:1px solid rgba(232,208,140,.32);
+}
+.calc__rate-when{color:var(--stone);font-size:.85em}
+
 .field{margin-bottom:1.1rem}
 .field label{
   display:block;font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.1em;
@@ -867,42 +877,73 @@ section{position:relative}
 /* =======================================================================
    VEHICLES BROWSER (public /vehicles page)
 ======================================================================= */
-.vbrowse{
-  display:grid;
-  grid-template-columns:280px 1fr;
-  gap:2.5rem; align-items:start;
+.vbrowse{display:block}
+
+/* Filter sheet — right-edge drawer at every viewport size */
+.vbrowse__panel{
+  position:fixed; top:0; right:0; bottom:0;
+  width:min(420px, 100vw); height:100dvh;
+  background:var(--ink-2); border-left:1px solid var(--line);
+  display:flex; flex-direction:column;
+  z-index:80; transform:translateX(100%);
+  transition:transform 320ms var(--ease-spring, cubic-bezier(.32,.72,.18,1));
+  box-shadow:-30px 0 60px rgba(0,0,0,.45);
 }
-@media (max-width: 960px){
-  .vbrowse{grid-template-columns:1fr}
+.vbrowse__panel.is-open{transform:translateX(0)}
+@media (max-width:640px){
+  .vbrowse__panel{width:100vw; border-left:none}
 }
 
-.vbrowse__panel{
-  position:sticky; top:6rem;
-  background:var(--ink-2); border:1px solid var(--line);
-  border-radius:18px; padding:1.4rem 1.2rem;
-  display:flex; flex-direction:column; gap:1rem;
-  max-height:calc(100vh - 7rem); overflow:auto;
-}
 .vbrowse__panel-head{
   display:flex; align-items:center; justify-content:space-between; gap:.5rem;
-  padding-bottom:.85rem; border-bottom:1px solid var(--line);
+  padding:1.4rem 1.4rem 1rem; border-bottom:1px solid var(--line);
+  flex-shrink:0;
 }
 .vbrowse__panel-title{
-  font-family:var(--ff-display); font-weight:400; font-size:1.05rem;
-  color:var(--bone); margin:0; letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
+  font-family:var(--ff-display); font-weight:400; font-size:1.4rem;
+  color:var(--bone); margin:0; letter-spacing:-.015em;
+  font-variation-settings:"opsz" 32, "SOFT" 50;
+}
+.vbrowse__panel-close{
+  width:36px; height:36px; border-radius:50%;
+  background:transparent; border:1px solid var(--line); color:var(--bone);
+  cursor:pointer; font-size:1.4rem; line-height:1;
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:background .15s, border-color .15s;
+}
+.vbrowse__panel-close:hover{
+  background:rgba(232,208,140,.08); border-color:var(--line-strong);
+}
+.vbrowse__panel-body{
+  flex:1; overflow:auto;
+  padding:.6rem 1.4rem 1.4rem;
+  display:flex; flex-direction:column; gap:.2rem;
+}
+.vbrowse__panel-foot{
+  display:flex; gap:.6rem; padding:1rem 1.4rem;
+  border-top:1px solid var(--line);
+  background:var(--ink-2);
+  flex-shrink:0;
 }
 .vbrowse__clear{
-  font-family:var(--ff-mono); font-size:.7rem; letter-spacing:.08em;
-  text-transform:uppercase; color:var(--volt); cursor:pointer;
-  background:none; border:none; padding:0;
+  flex-shrink:0;
+  font-family:var(--ff-mono); font-size:.72rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--bone); cursor:pointer;
+  background:transparent; border:1px solid var(--line);
+  padding:.85rem 1.2rem; border-radius:999px;
+  transition:border-color .15s, color .15s;
 }
-.vbrowse__clear:hover{opacity:.8}
-.vbrowse__panel-close{
-  display:none; width:32px; height:32px; border-radius:8px;
-  background:transparent; border:1px solid var(--line); color:var(--bone);
-  cursor:pointer; font-size:1.2rem; line-height:1;
+.vbrowse__clear:hover:not(:disabled){border-color:var(--line-strong); color:var(--volt)}
+.vbrowse__clear:disabled{opacity:.4; cursor:not-allowed}
+.vbrowse__apply{
+  flex:1;
+  font-family:var(--ff-mono); font-size:.78rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink); cursor:pointer;
+  background:var(--volt); border:1px solid var(--volt);
+  padding:.85rem 1.2rem; border-radius:999px;
+  transition:filter .15s;
 }
+.vbrowse__apply:hover{filter:brightness(1.08)}
 
 .vbrowse__group{
   border:none; padding:0; margin:0;
@@ -957,13 +998,16 @@ section{position:relative}
   padding-bottom:1rem; border-bottom:1px solid var(--line);
 }
 .vbrowse__filters-toggle{
-  display:none; align-items:center; gap:.5rem;
-  padding:.55rem .9rem; border-radius:999px;
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.65rem 1.1rem; border-radius:999px;
   background:var(--ink-2); color:var(--bone);
   border:1px solid var(--line-strong);
-  font-size:.85rem; cursor:pointer;
-  font-family:var(--ff-sans);
+  font-family:var(--ff-mono); font-size:.74rem;
+  letter-spacing:.14em; text-transform:uppercase;
+  cursor:pointer; transition:border-color .15s, color .15s;
 }
+.vbrowse__filters-toggle:hover{border-color:var(--volt); color:var(--volt)}
+.vbrowse__filters-toggle svg{flex-shrink:0}
 .vbrowse__count{
   font-family:var(--ff-mono); font-size:.78rem;
   letter-spacing:.06em; color:var(--stone);
@@ -997,23 +1041,43 @@ section{position:relative}
   font:inherit;
 }
 
-/* Mobile filter drawer */
-@media (max-width: 960px){
-  .vbrowse__filters-toggle{display:inline-flex}
-  .vbrowse__panel{
-    position:fixed; inset:0 auto 0 0; top:0;
-    width:min(86vw, 360px); max-height:100vh;
-    z-index:80; transform:translateX(-100%);
-    transition:transform .3s var(--ease-out);
-    border-radius:0; border-top:none; border-bottom:none; border-left:none;
-  }
-  .vbrowse__panel.is-open{transform:translateX(0)}
-  .vbrowse__panel-close{display:inline-flex}
-  .vbrowse__scrim{
-    position:fixed; inset:0; z-index:79;
-    background:rgba(0,0,0,.55); backdrop-filter:blur(2px);
-  }
+/* Active-filter chips above the grid */
+.vbrowse__chips{
+  display:flex; flex-wrap:wrap; gap:.5rem;
+  padding-bottom:.4rem;
 }
+.vbrowse__chip{
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.42rem .75rem .42rem .9rem;
+  border-radius:999px; cursor:pointer;
+  background:rgba(232,208,140,.08);
+  border:1px solid rgba(232,208,140,.32);
+  color:var(--volt);
+  font-family:var(--ff-mono); font-size:.74rem;
+  letter-spacing:.06em;
+  transition:background .15s, border-color .15s;
+}
+.vbrowse__chip:hover{
+  background:rgba(232,208,140,.14);
+  border-color:var(--volt);
+}
+.vbrowse__chip svg{opacity:.85}
+.vbrowse__chips-clear{
+  background:none; border:none; padding:.42rem .6rem;
+  color:var(--stone); cursor:pointer;
+  font-family:var(--ff-mono); font-size:.7rem;
+  letter-spacing:.12em; text-transform:uppercase;
+  text-decoration:underline; text-underline-offset:3px;
+}
+.vbrowse__chips-clear:hover{color:var(--bone)}
+
+/* Backdrop for the drawer */
+.vbrowse__scrim{
+  position:fixed; inset:0; z-index:79;
+  background:rgba(0,0,0,.55); backdrop-filter:blur(2px);
+  animation:vbrowse-fade-in .25s var(--ease-out);
+}
+@keyframes vbrowse-fade-in{from{opacity:0} to{opacity:1}}
 
 /* =======================================================================
    PRICE RANGE SLIDER (dual-thumb)
