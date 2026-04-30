@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidPageSlug, PAGE_REGISTRY } from "./PAGE_REGISTRY";
 import type { PageSlug } from "@/lib/repositories/pages";
+import type { Json } from "@/lib/supabase/database.types";
 
 // All admin actions return this discriminated union so callers can use
 // `if (!result.ok) setError(result.error)` and TS narrows reliably.
@@ -88,10 +89,12 @@ function isEditableType(v: unknown): v is EditableSectionType {
   return typeof v === "string" && (SECTION_TYPES as readonly string[]).includes(v);
 }
 
+// Returns a Json-typed object so it's directly assignable to the
+// page_sections.data jsonb column without a cast at the insert site.
 function readSectionData(
   type: EditableSectionType,
   formData: FormData,
-): Record<string, unknown> {
+): { [key: string]: Json } {
   if (type === "paragraph") {
     return {
       text: String(formData.get("text") ?? ""),
