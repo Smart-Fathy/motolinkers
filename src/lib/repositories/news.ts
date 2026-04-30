@@ -17,9 +17,13 @@ export async function getAllNews(): Promise<NewsItem[]> {
       .select("slug, title, excerpt, body_md, cover_image_url, published_at")
       .eq("is_published", true)
       .order("published_at", { ascending: false, nullsFirst: false });
-    if (error || !data) return [];
-    return data;
-  } catch {
+    if (error) {
+      console.error("[news] getAllNews supabase error:", error);
+      return [];
+    }
+    return data ?? [];
+  } catch (e) {
+    console.error("[news] getAllNews threw:", e);
     return [];
   }
 }
@@ -33,9 +37,13 @@ export async function getNewsBySlug(slug: string): Promise<NewsItem | null> {
       .eq("slug", slug)
       .eq("is_published", true)
       .maybeSingle();
-    if (error || !data) return null;
-    return data;
-  } catch {
+    if (error) {
+      console.error(`[news] getNewsBySlug(${slug}) supabase error:`, error);
+      return null;
+    }
+    return data ?? null;
+  } catch (e) {
+    console.error(`[news] getNewsBySlug(${slug}) threw:`, e);
     return null;
   }
 }
