@@ -1,19 +1,31 @@
 import { getPageSections, type PageSlug } from "@/lib/repositories/pages";
-import SectionRenderer from "./SectionRenderer";
+import SectionRenderer, { type SectionContext } from "./SectionRenderer";
 
 // Server component. Loads all visible sections for `slug` and renders
-// them in order. Returns null if the page has no sections, so callers
-// can drop this in unconditionally without risking an empty wrapper
-// element on every page.
-export default async function PageSections({ slug }: { slug: PageSlug }) {
+// them in order. Each renderer owns its own outer markup (most home
+// components render their own <section> + .wrap; the inline renderers
+// — paragraph, image, page_header, qa, legal_clause — render their
+// own .wrap so the page composition stays consistent).
+//
+// `ctx` carries render-time data that some sections need but which
+// isn't stored in the section row itself: the current vehicles list
+// (fleet_grid) and the calculator config (calculator_widget). Pages
+// that don't render those types can omit ctx.
+export default async function PageSections({
+  slug,
+  ctx,
+}: {
+  slug: PageSlug;
+  ctx?: SectionContext;
+}) {
   const sections = await getPageSections(slug);
   if (sections.length === 0) return null;
 
   return (
-    <div className="wrap" style={{ display: "flex", flexDirection: "column", gap: "2rem", marginTop: "3rem" }}>
+    <>
       {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer key={section.id} section={section} ctx={ctx} />
       ))}
-    </div>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Calculator from "@/components/home/Calculator";
 import PageHero from "@/components/layout/PageHero";
 import PageSections from "@/components/cms/PageSections";
 import { getCalculatorConfig } from "@/lib/repositories/calculator";
@@ -14,15 +13,14 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function CalculatorPage() {
-  const [config, hero] = await Promise.all([
+  const [calcConfig, hero] = await Promise.all([
     getCalculatorConfig(),
     getPageHero("calculator"),
   ]);
   return (
     <main style={{ paddingTop: hero ? 0 : "5rem" }}>
       {hero && <PageHero hero={hero} />}
-      <Calculator config={config} />
-      <PageSections slug="calculator" />
+      <PageSections slug="calculator" ctx={{ calcConfig }} />
     </main>
   );
 }

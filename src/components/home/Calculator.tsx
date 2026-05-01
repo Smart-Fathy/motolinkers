@@ -3,10 +3,24 @@
 import { useState } from "react";
 import Label from "@/components/ui/Label";
 import Reveal from "@/components/ui/Reveal";
+import { renderInlineHtml } from "@/lib/cms-html";
 
 type DriveType = "ev" | "reev" | "phev";
 type Origin = "cn" | "ae";
 type Payment = "usd" | "bank";
+
+export interface CalculatorWidgetHeader {
+  kicker?: string;
+  title_html?: string;
+  subtitle?: string;
+}
+
+export const CALCULATOR_WIDGET_DEFAULT_HEADER: CalculatorWidgetHeader = {
+  kicker: "Landed-cost calculator",
+  title_html: "Every pound, <em>accounted for.</em>",
+  subtitle:
+    "Four inputs. Full breakdown. The same math our consultants run on a Monday morning — taxes, freight, insurance, clearance, and exchange margin all exposed.",
+};
 
 export type CalculatorConfig = {
   egp_rate: number;
@@ -84,8 +98,10 @@ interface Result {
 
 export default function Calculator({
   config = DEFAULT_CALCULATOR_CONFIG,
+  header = CALCULATOR_WIDGET_DEFAULT_HEADER,
 }: {
   config?: CalculatorConfig;
+  header?: CalculatorWidgetHeader;
 }) {
   const typeRates: Record<DriveType, number> = {
     ev: config.tax_ev,
@@ -193,19 +209,23 @@ export default function Calculator({
     <section className="calc" id="calculator">
       <div className="calc__bg" aria-hidden="true" />
       <div className="wrap">
-        <div className="calc__head">
-          <div>
-            <Label>Landed-cost calculator</Label>
-            <Reveal as="h2" className="calc__title">
-              Every pound, <em>accounted for.</em>
-            </Reveal>
+        {(header.kicker || header.title_html || header.subtitle) && (
+          <div className="calc__head">
+            <div>
+              {header.kicker && <Label>{header.kicker}</Label>}
+              {header.title_html && (
+                <Reveal as="h2" className="calc__title">
+                  {renderInlineHtml(header.title_html)}
+                </Reveal>
+              )}
+            </div>
+            {header.subtitle && (
+              <Reveal as="p" className="calc__sub">
+                {header.subtitle}
+              </Reveal>
+            )}
           </div>
-          <Reveal as="p" className="calc__sub">
-            Four inputs. Full breakdown. The same math our consultants run on a
-            Monday morning — taxes, freight, insurance, clearance, and exchange
-            margin all exposed.
-          </Reveal>
-        </div>
+        )}
 
         <div className="calc__shell">
           <div className="steps" id="calcSteps" role="tablist">

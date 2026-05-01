@@ -149,8 +149,11 @@ create table if not exists public.page_sections (
   position int not null,
   type text not null
     check (type in (
-      'paragraph','image','heading','rich_text',
-      'gallery','list','cta','spacer','divider','embed'
+      'paragraph','image','heading','rich_text','gallery','list','cta',
+      'spacer','divider','embed',
+      'page_header','hero_block','marquee','manifesto','fleet_grid',
+      'calculator_widget','routes','process','testimonials','stats_grid',
+      'cta_block','qa','legal_clause'
     )),
   data jsonb not null default '{}'::jsonb,
   is_visible boolean not null default true,

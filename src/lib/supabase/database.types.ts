@@ -194,7 +194,20 @@ export interface Database {
             | "cta"
             | "spacer"
             | "divider"
-            | "embed";
+            | "embed"
+            | "page_header"
+            | "hero_block"
+            | "marquee"
+            | "manifesto"
+            | "fleet_grid"
+            | "calculator_widget"
+            | "routes"
+            | "process"
+            | "testimonials"
+            | "stats_grid"
+            | "cta_block"
+            | "qa"
+            | "legal_clause";
           data: Json;
           is_visible: boolean;
           updated_at: string;

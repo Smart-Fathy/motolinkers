@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import Manifesto from "@/components/home/Manifesto";
-import Stats from "@/components/home/Stats";
-import Testimonials from "@/components/home/Testimonials";
 import PageHero from "@/components/layout/PageHero";
 import PageSections from "@/components/cms/PageSections";
 import { getPageHero } from "@/lib/repositories/pages";
@@ -19,9 +16,6 @@ export default async function AboutPage() {
   return (
     <main style={{ paddingTop: hero ? 0 : "5rem" }}>
       {hero && <PageHero hero={hero} />}
-      <Manifesto />
-      <Stats />
-      <Testimonials />
       <PageSections slug="about" />
     </main>
   );

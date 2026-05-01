@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Label from "@/components/ui/Label";
 import PageHero from "@/components/layout/PageHero";
 import PageSections from "@/components/cms/PageSections";
 import { getAllNews } from "@/lib/repositories/news";
@@ -31,24 +30,8 @@ export default async function NewsPage() {
   return (
     <main style={{ paddingTop: hero ? 0 : "9rem", paddingBottom: "var(--sp-section)" }}>
       {hero && <PageHero hero={hero} />}
+      <PageSections slug="news" />
       <div className="wrap">
-        <Label>News & Insights</Label>
-        <h1
-          style={{
-            fontFamily: "var(--ff-display)",
-            fontWeight: 300,
-            fontSize: "clamp(2.4rem, 5.5vw, 5rem)",
-            lineHeight: 0.95,
-            letterSpacing: "-.035em",
-            fontVariationSettings: '"opsz" 144, "SOFT" 50',
-            color: "var(--bone)",
-            margin: "0 0 3rem",
-            maxWidth: "20ch",
-          }}
-        >
-          From the <em style={{ color: "var(--volt)", fontStyle: "italic" }}>field.</em>
-        </h1>
-
         {items.length === 0 ? (
           <p style={{ color: "var(--stone)", fontSize: "1rem" }}>
             No articles yet — check back soon.
@@ -110,7 +93,6 @@ export default async function NewsPage() {
           </div>
         )}
       </div>
-      <PageSections slug="news" />
     </main>
   );
 }
