@@ -2,12 +2,24 @@
 
 import { useEffect, useRef } from "react";
 
-const STATS = [
-  { target: 5, suffix: "+", label: "Years in Operation" },
-  { target: 220, suffix: "", label: "Vehicles Landed" },
-  { target: 17, suffix: "", label: "Verified Manufacturers" },
-  { target: 100, suffix: "%", label: "Clearance Success Rate" },
-];
+export interface StatItem {
+  target: number;
+  suffix: string;
+  label: string;
+}
+
+export interface StatsData {
+  items: StatItem[];
+}
+
+export const STATS_DEFAULT_DATA: StatsData = {
+  items: [
+    { target: 5, suffix: "+", label: "Years in Operation" },
+    { target: 220, suffix: "", label: "Vehicles Landed" },
+    { target: 17, suffix: "", label: "Verified Manufacturers" },
+    { target: 100, suffix: "%", label: "Clearance Success Rate" },
+  ],
+};
 
 function Counter({ target }: { target: number }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -45,13 +57,13 @@ function Counter({ target }: { target: number }) {
   );
 }
 
-export default function Stats() {
+export default function Stats({ data = STATS_DEFAULT_DATA }: { data?: StatsData }) {
   return (
     <section className="stats">
       <div className="wrap">
         <div className="stats__grid">
-          {STATS.map((s) => (
-            <div key={s.label} className="stat">
+          {data.items.map((s, i) => (
+            <div key={`${s.label}-${i}`} className="stat">
               <div className="stat__value">
                 <Counter target={s.target} />
                 {s.suffix}

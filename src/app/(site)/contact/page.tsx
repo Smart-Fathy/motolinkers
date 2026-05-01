@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Label from "@/components/ui/Label";
 import ContactForm from "./ContactForm";
 import PageHero from "@/components/layout/PageHero";
 import PageSections from "@/components/cms/PageSections";
@@ -23,24 +22,10 @@ export default async function ContactPage(props: PageProps<"/contact">) {
       style={{ paddingTop: hero ? 0 : "9rem", minHeight: "100vh" }}
     >
       {hero && <PageHero hero={hero} />}
+      <PageSections slug="contact" />
       <div className="wrap">
-        <div className="calc__head">
-          <div>
-            <Label>Contact</Label>
-            <h1 className="calc__title">
-              Talk to a <em>consultant.</em>
-            </h1>
-          </div>
-          <p className="calc__sub">
-            Tell us about the vehicle you have in mind and how to reach you.
-            We&apos;ll come back with a confidential price breakdown and a
-            shipping window.
-          </p>
-        </div>
-
         <ContactForm initialVehicle={initialVehicle} />
       </div>
-      <PageSections slug="contact" />
     </main>
   );
 }
