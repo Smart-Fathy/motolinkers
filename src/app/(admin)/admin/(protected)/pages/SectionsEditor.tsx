@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   createSection,
   updateSection,
   deleteSection,
   moveSection,
 } from "./actions";
-import { uploadPageImage } from "./upload-action";
+import TypedSectionFields from "./forms/TypedSectionFields";
 import type { PageSlug } from "@/lib/repositories/pages";
 
 type SectionRow = {
@@ -19,18 +19,31 @@ type SectionRow = {
   is_visible: boolean;
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  paragraph: "Paragraph",
-  image: "Image",
-  heading: "Heading (coming soon)",
-  rich_text: "Rich text (coming soon)",
-  gallery: "Gallery (coming soon)",
-  list: "List (coming soon)",
-  cta: "CTA (coming soon)",
-  spacer: "Spacer (coming soon)",
-  divider: "Divider (coming soon)",
-  embed: "Embed (coming soon)",
-};
+// Visible types in the picker dropdown. Order = the order shown in
+// the menu. Internal placeholder types (heading, rich_text, gallery,
+// list, cta, spacer, divider, embed) aren't here yet because they
+// don't have admin forms.
+const SECTION_TYPE_OPTIONS: { value: string; label: string; group: string }[] = [
+  { value: "page_header", label: "Page header", group: "Layout" },
+  { value: "paragraph", label: "Paragraph", group: "Content" },
+  { value: "image", label: "Image", group: "Content" },
+  { value: "qa", label: "Q & A (FAQ entry)", group: "Content" },
+  { value: "legal_clause", label: "Legal clause", group: "Content" },
+  { value: "hero_block", label: "Hero block", group: "Home sections" },
+  { value: "marquee", label: "Brand marquee", group: "Home sections" },
+  { value: "manifesto", label: "Manifesto pillars", group: "Home sections" },
+  { value: "fleet_grid", label: "Fleet grid", group: "Home sections" },
+  { value: "calculator_widget", label: "Calculator widget", group: "Home sections" },
+  { value: "routes", label: "Trade lanes / routes", group: "Home sections" },
+  { value: "process", label: "Process steps", group: "Home sections" },
+  { value: "testimonials", label: "Testimonials", group: "Home sections" },
+  { value: "stats_grid", label: "Stats grid", group: "Home sections" },
+  { value: "cta_block", label: "CTA block", group: "Home sections" },
+];
+
+const TYPE_LABEL: Record<string, string> = Object.fromEntries(
+  SECTION_TYPE_OPTIONS.map((o) => [o.value, o.label]),
+);
 
 export default function SectionsEditor({
   slug,
@@ -39,7 +52,7 @@ export default function SectionsEditor({
   slug: PageSlug;
   sections: SectionRow[];
 }) {
-  const [adding, setAdding] = useState<"paragraph" | "image" | null>(null);
+  const [adding, setAdding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -47,7 +60,7 @@ export default function SectionsEditor({
     setError(null);
   }
 
-  function onAddSubmit(type: "paragraph" | "image", e: React.FormEvent<HTMLFormElement>) {
+  function onAddSubmit(type: string, e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     clearMessages();
     const fd = new FormData(e.currentTarget);
@@ -58,8 +71,6 @@ export default function SectionsEditor({
       if (!result.ok) setError(result.error);
       else {
         setAdding(null);
-        // Server action revalidates the public path; reload to see
-        // the new row in admin too.
         window.location.reload();
       }
     });
@@ -90,7 +101,7 @@ export default function SectionsEditor({
 
       {sections.length === 0 && !adding && (
         <p style={{ color: "var(--stone)", fontSize: ".95rem" }}>
-          No sections yet. Add the first one with the buttons below.
+          No sections yet. Use the picker below to add one.
         </p>
       )}
 
@@ -109,50 +120,65 @@ export default function SectionsEditor({
         />
       ))}
 
-      {adding === "paragraph" && (
-        <NewSectionFrame title="New paragraph" onCancel={() => setAdding(null)}>
-          <form className="adm__form" onSubmit={(e) => onAddSubmit("paragraph", e)}>
-            <ParagraphFields />
+      {adding && (
+        <NewSectionFrame
+          title={`New ${TYPE_LABEL[adding] ?? adding}`}
+          onCancel={() => setAdding(null)}
+        >
+          <form className="adm__form" onSubmit={(e) => onAddSubmit(adding, e)}>
+            <TypedSectionFields type={adding} data={{}} />
             <div className="adm__form-actions">
               <button type="submit" className="adm__btn adm__btn--primary" disabled={pending}>
-                {pending ? "Adding…" : "Add paragraph"}
+                {pending ? "Adding…" : `Add ${TYPE_LABEL[adding] ?? adding}`}
               </button>
             </div>
           </form>
         </NewSectionFrame>
       )}
 
-      {adding === "image" && (
-        <NewSectionFrame title="New image" onCancel={() => setAdding(null)}>
-          <form className="adm__form" onSubmit={(e) => onAddSubmit("image", e)}>
-            <ImageFields slug={slug} onError={setError} />
-            <div className="adm__form-actions">
-              <button type="submit" className="adm__btn adm__btn--primary" disabled={pending}>
-                {pending ? "Adding…" : "Add image"}
-              </button>
-            </div>
-          </form>
-        </NewSectionFrame>
-      )}
+      {!adding && <TypePicker onPick={(t) => setAdding(t)} />}
+    </div>
+  );
+}
 
-      {!adding && (
-        <div style={{ display: "flex", gap: ".7rem", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className="adm__btn adm__btn--ghost"
-            onClick={() => setAdding("paragraph")}
-          >
-            + Paragraph
-          </button>
-          <button
-            type="button"
-            className="adm__btn adm__btn--ghost"
-            onClick={() => setAdding("image")}
-          >
-            + Image
-          </button>
-        </div>
-      )}
+function TypePicker({ onPick }: { onPick: (type: string) => void }) {
+  const [type, setType] = useState<string>("");
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: ".7rem",
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
+      <select
+        value={type}
+        onChange={(e) => setType(e.target.value)}
+        className="adm__input"
+        style={{ flex: 1, minWidth: 240 }}
+      >
+        <option value="">Choose a section type to add…</option>
+        {Array.from(new Set(SECTION_TYPE_OPTIONS.map((o) => o.group))).map((g) => (
+          <optgroup key={g} label={g}>
+            {SECTION_TYPE_OPTIONS.filter((o) => o.group === g).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="adm__btn adm__btn--primary"
+        disabled={!type}
+        onClick={() => {
+          if (type) onPick(type);
+        }}
+      >
+        Add section
+      </button>
     </div>
   );
 }
@@ -184,11 +210,7 @@ function NewSectionFrame({
         }}
       >
         <h2 style={{ margin: 0, fontSize: "1rem", color: "var(--bone)" }}>{title}</h2>
-        <button
-          type="button"
-          className="adm__btn adm__btn--ghost"
-          onClick={onCancel}
-        >
+        <button type="button" className="adm__btn adm__btn--ghost" onClick={onCancel}>
           Cancel
         </button>
       </div>
@@ -266,9 +288,7 @@ function SectionCard({
         >
           #{section.position} · {TYPE_LABEL[section.type] ?? section.type}
         </span>
-        {!section.is_visible && (
-          <span className="adm__pill adm__pill--off">Hidden</span>
-        )}
+        {!section.is_visible && <span className="adm__pill adm__pill--off">Hidden</span>}
         <span style={{ flex: 1 }} />
         <button
           type="button"
@@ -310,10 +330,19 @@ function SectionCard({
 
       {!editing && <SectionPreview section={section} />}
 
-      {editing && section.type === "paragraph" && (
+      {editing && (
         <form className="adm__form" onSubmit={onEditSubmit}>
-          <ParagraphFields data={section.data} />
-          <VisibilityToggle isVisible={section.is_visible} />
+          <TypedSectionFields type={section.type} data={section.data} />
+          <div className="adm__field adm__field--full">
+            <label className="adm__checkbox">
+              <input
+                type="checkbox"
+                name="is_visible"
+                defaultChecked={section.is_visible}
+              />
+              <span>Visible on public page</span>
+            </label>
+          </div>
           <div className="adm__form-actions">
             <button type="submit" className="adm__btn adm__btn--primary" disabled={savePending}>
               {savePending ? "Saving…" : "Save"}
@@ -321,62 +350,24 @@ function SectionCard({
           </div>
         </form>
       )}
-      {editing && section.type === "image" && (
-        <form className="adm__form" onSubmit={onEditSubmit}>
-          <ImageFields slug={slug} data={section.data} onError={onError} />
-          <VisibilityToggle isVisible={section.is_visible} />
-          <div className="adm__form-actions">
-            <button type="submit" className="adm__btn adm__btn--primary" disabled={savePending}>
-              {savePending ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
-      )}
-      {editing &&
-        section.type !== "paragraph" &&
-        section.type !== "image" && (
-          <p style={{ color: "var(--stone)", fontSize: ".9rem" }}>
-            This section type isn&rsquo;t editable yet — coming in a follow-up
-            release. Delete and recreate as a paragraph or image for now.
-          </p>
-        )}
     </article>
-  );
-}
-
-function VisibilityToggle({ isVisible }: { isVisible: boolean }) {
-  return (
-    <div className="adm__field adm__field--full">
-      <label className="adm__checkbox">
-        <input type="checkbox" name="is_visible" defaultChecked={isVisible} />
-        <span>Visible on public page</span>
-      </label>
-    </div>
   );
 }
 
 function SectionPreview({ section }: { section: SectionRow }) {
   const data = (section.data ?? {}) as Record<string, unknown>;
+  const txt = (v: unknown): string => (typeof v === "string" ? v : "");
+
   if (section.type === "paragraph") {
-    const text = typeof data.text === "string" ? data.text : "";
     return (
-      <p
-        style={{
-          margin: 0,
-          color: "var(--bone)",
-          opacity: 0.85,
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {text || <em style={{ color: "var(--stone)" }}>(empty)</em>}
+      <p style={{ margin: 0, color: "var(--bone)", opacity: 0.85, whiteSpace: "pre-wrap" }}>
+        {txt(data.text) || <em style={{ color: "var(--stone)" }}>(empty)</em>}
       </p>
     );
   }
   if (section.type === "image") {
-    const url = typeof data.url === "string" ? data.url : "";
-    if (!url) {
-      return <em style={{ color: "var(--stone)" }}>(no image)</em>;
-    }
+    const url = txt(data.url);
+    if (!url) return <em style={{ color: "var(--stone)" }}>(no image)</em>;
     return (
       <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -392,187 +383,23 @@ function SectionPreview({ section }: { section: SectionRow }) {
           }}
         />
         <div style={{ fontSize: ".85rem", color: "var(--stone)" }}>
-          {typeof data.caption === "string" && data.caption ? data.caption : "—"}
+          {txt(data.caption) || "—"}
         </div>
       </div>
     );
   }
-  return <em style={{ color: "var(--stone)" }}>(preview pending)</em>;
-}
 
-// ─── per-type field groups ───────────────────────────────────────────
-
-function ParagraphFields({ data }: { data?: unknown }) {
-  const d = (data ?? {}) as Record<string, unknown>;
-  const initialText = typeof d.text === "string" ? d.text : "";
-  const initialAlign = d.align === "center" ? "center" : "left";
+  // Generic preview: a one-liner from the most identifying field for
+  // each type. Keeps the list scannable without opening every section.
+  const summary =
+    txt(data.title_html) ||
+    txt(data.kicker) ||
+    txt(data.heading) ||
+    txt(data.question) ||
+    "(no summary)";
   return (
-    <>
-      <div className="adm__field adm__field--full">
-        <label className="adm__label" htmlFor="text">Text</label>
-        <textarea
-          id="text"
-          name="text"
-          rows={6}
-          className="adm__input"
-          defaultValue={initialText}
-          placeholder="Use a blank line to separate paragraphs."
-        />
-      </div>
-      <div className="adm__field">
-        <label className="adm__label" htmlFor="align">Alignment</label>
-        <select
-          id="align"
-          name="align"
-          className="adm__input"
-          defaultValue={initialAlign}
-        >
-          <option value="left">Left</option>
-          <option value="center">Center</option>
-        </select>
-      </div>
-    </>
-  );
-}
-
-function ImageFields({
-  slug,
-  data,
-  onError,
-}: {
-  slug: PageSlug;
-  data?: unknown;
-  onError: (msg: string | null) => void;
-}) {
-  const d = (data ?? {}) as Record<string, unknown>;
-  const [url, setUrl] = useState(typeof d.url === "string" ? d.url : "");
-  const [widthPct, setWidthPct] = useState(
-    typeof d.width_pct === "number" ? d.width_pct : 100,
-  );
-  const [radius, setRadius] = useState(
-    typeof d.border_radius_px === "number" ? d.border_radius_px : 12,
-  );
-  const [opacity, setOpacity] = useState(
-    typeof d.opacity === "number" ? d.opacity : 1,
-  );
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement | null>(null);
-
-  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    onError(null);
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.set("file", file);
-      fd.set("page_slug", slug);
-      const result = await uploadPageImage(fd);
-      if (!result.ok) onError(result.error);
-      else setUrl(result.url);
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  return (
-    <>
-      <div className="adm__field adm__field--full">
-        <label className="adm__label">Image URL</label>
-        <div style={{ display: "flex", gap: ".7rem", flexWrap: "wrap" }}>
-          <input
-            type="text"
-            name="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="adm__input"
-            placeholder="https://images.motolinkers.com/pages/<slug>/…"
-            style={{ flex: 1, minWidth: 280 }}
-          />
-          <button
-            type="button"
-            className="adm__btn adm__btn--ghost"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? "Uploading…" : "Upload"}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={onPickFile}
-          />
-        </div>
-      </div>
-      <div className="adm__field adm__field--full">
-        <label className="adm__label" htmlFor="alt">Alt text</label>
-        <input
-          id="alt"
-          name="alt"
-          type="text"
-          className="adm__input"
-          defaultValue={typeof d.alt === "string" ? d.alt : ""}
-        />
-      </div>
-      <div className="adm__field">
-        <label className="adm__label" htmlFor="width_pct">
-          Width ({widthPct}%)
-        </label>
-        <input
-          id="width_pct"
-          name="width_pct"
-          type="range"
-          min={20}
-          max={100}
-          value={widthPct}
-          onChange={(e) => setWidthPct(Number(e.target.value))}
-          className="adm__input"
-        />
-      </div>
-      <div className="adm__field">
-        <label className="adm__label" htmlFor="border_radius_px">
-          Corner radius ({radius} px)
-        </label>
-        <input
-          id="border_radius_px"
-          name="border_radius_px"
-          type="range"
-          min={0}
-          max={64}
-          value={radius}
-          onChange={(e) => setRadius(Number(e.target.value))}
-          className="adm__input"
-        />
-      </div>
-      <div className="adm__field">
-        <label className="adm__label" htmlFor="opacity">
-          Opacity ({opacity.toFixed(2)})
-        </label>
-        <input
-          id="opacity"
-          name="opacity"
-          type="range"
-          min={0.1}
-          max={1}
-          step={0.05}
-          value={opacity}
-          onChange={(e) => setOpacity(Number(e.target.value))}
-          className="adm__input"
-        />
-      </div>
-      <div className="adm__field adm__field--full">
-        <label className="adm__label" htmlFor="caption">Caption (optional)</label>
-        <input
-          id="caption"
-          name="caption"
-          type="text"
-          className="adm__input"
-          defaultValue={typeof d.caption === "string" ? d.caption : ""}
-        />
-      </div>
-    </>
+    <p style={{ margin: 0, color: "var(--bone)", opacity: 0.78, fontSize: ".95rem" }}>
+      {summary.replace(/<[^>]+>/g, "")}
+    </p>
   );
 }
