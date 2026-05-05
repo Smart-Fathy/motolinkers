@@ -36,7 +36,7 @@ export const HERO_DEFAULT_DATA: HeroBlockData = {
     col1_top: "Cairo · Alexandria",
     col1_bot: "Est. 2020 · Operator since",
     col2_top: "N 30.0444 · E 31.2357",
-    col2_bot: "Working hours · Sun–Thu · 11:00–23:00",
+    col2_bot: "Sun–Thu 11:00–23:00 · Sat 15:00–23:00 · Fri closed",
   },
   title_lines: ["Transparency", "is the new", "<em>luxury.</em>"],
   aria_label: "Transparency is the new luxury.",
