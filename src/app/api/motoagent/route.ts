@@ -137,8 +137,13 @@ export async function POST(req: Request) {
       (convoRes.data as { session_id: string }).session_id === session.sessionId
     ) {
       conversationId = (convoRes.data as { id: string }).id;
-      transcript = Array.isArray((convoRes.data as { transcript: unknown }).transcript)
-        ? ((convoRes.data as { transcript: TranscriptMessage[] }).transcript)
+      const rawTranscript = (convoRes.data as { transcript: unknown }).transcript;
+      // Supabase types `transcript` as Json (its widest jsonb shape).
+      // We narrow by `Array.isArray` and then cast through unknown
+      // because TS won't go from Json directly to a structured row
+      // type without the explicit double-cast.
+      transcript = Array.isArray(rawTranscript)
+        ? (rawTranscript as unknown as TranscriptMessage[])
         : [];
     }
   }
