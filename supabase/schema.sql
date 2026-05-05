@@ -177,6 +177,78 @@ create policy "Public read visible sections"
   using (is_visible = true);
 
 -- =====================================================================
+--  MotoAgent — chat widget (see migrations/008)
+-- =====================================================================
+create table if not exists public.motoagent_settings (
+  id int primary key default 1 check (id = 1),
+  is_enabled boolean not null default true,
+  model text not null default '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  temperature numeric(3,2) not null default 0.6,
+  max_output_tokens int not null default 800,
+  system_prompt_extra text not null default '',
+  greeting_en text not null default 'Hi! I''m the MotoLinkers assistant. Ask me anything about importing your next EV.',
+  greeting_ar text not null default 'مرحباً! أنا مساعد MotoLinkers. اسألني أي شيء عن استيراد سيارتك الكهربائية القادمة.',
+  daily_message_cap_per_session int not null default 60,
+  per_minute_cap_per_session int not null default 12,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.motoagent_conversations (
+  id uuid primary key default gen_random_uuid(),
+  session_id text not null,
+  locale text not null check (locale in ('en','ar')) default 'en',
+  country text,
+  message_count int not null default 0,
+  transcript jsonb not null default '[]'::jsonb,
+  lead_id uuid references public.leads(id) on delete set null,
+  started_at timestamptz not null default now(),
+  last_message_at timestamptz not null default now()
+);
+
+alter table public.motoagent_settings enable row level security;
+alter table public.motoagent_conversations enable row level security;
+
+drop policy if exists "Public read motoagent settings" on public.motoagent_settings;
+create policy "Public read motoagent settings"
+  on public.motoagent_settings for select
+  to anon, authenticated using (true);
+
+drop policy if exists "Anon insert motoagent conversation" on public.motoagent_conversations;
+create policy "Anon insert motoagent conversation"
+  on public.motoagent_conversations for insert
+  to anon, authenticated with check (true);
+
+drop policy if exists "Anon update motoagent conversation" on public.motoagent_conversations;
+create policy "Anon update motoagent conversation"
+  on public.motoagent_conversations for update
+  to anon, authenticated using (true) with check (true);
+
+-- =====================================================================
+--  Analytics — page_events (see migrations/007)
+-- =====================================================================
+create table if not exists public.page_events (
+  id uuid primary key default gen_random_uuid(),
+  session_id text not null,
+  path text not null,
+  vehicle_slug text,
+  country text,
+  region text,
+  city text,
+  device text check (device in ('mobile','tablet','desktop')),
+  referrer_kind text check (referrer_kind in ('direct','search','social','other')),
+  is_new_visitor boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.page_events enable row level security;
+
+drop policy if exists "Anyone can insert a page event" on public.page_events;
+create policy "Anyone can insert a page event"
+  on public.page_events for insert
+  to anon, authenticated
+  with check (true);
+
+-- =====================================================================
 --  Seed: 15 vehicles from the reference design
 -- =====================================================================
 insert into public.vehicles (slug, name, origin, type, year, price_egp, transmission, drivetrain, image_url) values

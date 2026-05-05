@@ -16,6 +16,12 @@ grant select, delete on public.leads to authenticated;
 grant all on public.calculator_config to authenticated;
 grant all on public.page_heroes to authenticated;
 grant all on public.page_sections to authenticated;
+grant insert on public.page_events to anon, authenticated;
+grant select, delete on public.page_events to authenticated;
+grant select on public.motoagent_settings to anon, authenticated;
+grant insert, update on public.motoagent_conversations to anon, authenticated;
+grant all on public.motoagent_settings to authenticated;
+grant select, update, delete on public.motoagent_conversations to authenticated;
 
 -- 2. Vehicles: admin sees ALL rows (including unpublished), full CRUD.
 drop policy if exists "Admin full access vehicles" on public.vehicles;
@@ -54,5 +60,38 @@ create policy "Admin update calc config"
   using (true)
   with check (true);
 
--- 6. Force PostgREST to pick up the new policies immediately.
+-- 6. Page events: admin reads + deletes; anon inserts handled by RLS.
+drop policy if exists "Admin read page events" on public.page_events;
+create policy "Admin read page events"
+  on public.page_events for select
+  to authenticated
+  using (true);
+
+drop policy if exists "Admin delete page events" on public.page_events;
+create policy "Admin delete page events"
+  on public.page_events for delete
+  to authenticated
+  using (true);
+
+-- 7. MotoAgent: admin sees ALL conversations + can edit settings.
+drop policy if exists "Admin all motoagent settings" on public.motoagent_settings;
+create policy "Admin all motoagent settings"
+  on public.motoagent_settings for all
+  to authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "Admin read motoagent conversations" on public.motoagent_conversations;
+create policy "Admin read motoagent conversations"
+  on public.motoagent_conversations for select
+  to authenticated
+  using (true);
+
+drop policy if exists "Admin delete motoagent conversations" on public.motoagent_conversations;
+create policy "Admin delete motoagent conversations"
+  on public.motoagent_conversations for delete
+  to authenticated
+  using (true);
+
+-- 8. Force PostgREST to pick up the new policies immediately.
 notify pgrst, 'reload schema';

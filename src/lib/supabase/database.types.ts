@@ -179,6 +179,74 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["page_heroes"]["Row"]>;
         Relationships: [];
       };
+      motoagent_settings: {
+        Row: {
+          id: number;
+          is_enabled: boolean;
+          model: string;
+          temperature: number;
+          max_output_tokens: number;
+          system_prompt_extra: string;
+          greeting_en: string;
+          greeting_ar: string;
+          daily_message_cap_per_session: number;
+          per_minute_cap_per_session: number;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["motoagent_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["motoagent_settings"]["Row"]>;
+        Relationships: [];
+      };
+      motoagent_conversations: {
+        Row: {
+          id: string;
+          session_id: string;
+          locale: "en" | "ar";
+          country: string | null;
+          message_count: number;
+          transcript: Json;
+          lead_id: string | null;
+          started_at: string;
+          last_message_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["motoagent_conversations"]["Row"],
+          "id" | "started_at" | "last_message_at" | "message_count" | "transcript"
+        > & {
+          id?: string;
+          started_at?: string;
+          last_message_at?: string;
+          message_count?: number;
+          transcript?: Json;
+        };
+        Update: Partial<Database["public"]["Tables"]["motoagent_conversations"]["Row"]>;
+        Relationships: [];
+      };
+      page_events: {
+        Row: {
+          id: string;
+          session_id: string;
+          path: string;
+          vehicle_slug: string | null;
+          country: string | null;
+          region: string | null;
+          city: string | null;
+          device: "mobile" | "tablet" | "desktop" | null;
+          referrer_kind: "direct" | "search" | "social" | "other" | null;
+          is_new_visitor: boolean;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["page_events"]["Row"],
+          "id" | "created_at" | "is_new_visitor"
+        > & {
+          id?: string;
+          created_at?: string;
+          is_new_visitor?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["page_events"]["Row"]>;
+        Relationships: [];
+      };
       page_sections: {
         Row: {
           id: string;
