@@ -20,6 +20,9 @@ export default function SortSelect({ value }: { value: string }) {
     const next = new URLSearchParams(searchParams.toString());
     if (e.target.value === "newest") next.delete("sort");
     else next.set("sort", e.target.value);
+    // Sort changes invalidate the current page index; reset to 1 so
+    // we don't land on an empty page after re-ordering the list.
+    next.delete("page");
     const qs = next.toString();
     router.push(qs ? `/admin/vehicles?${qs}` : "/admin/vehicles");
   };

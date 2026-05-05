@@ -7,6 +7,13 @@ import SyncAllButton from "./SyncAllButton";
 
 export const metadata = { title: "Vehicles — MotoLinkers Admin" };
 
+// Pagination caps the work the worker does per request. Each row
+// instantiates ~8 client component boundaries (EditableCell ×8); at
+// ~80 vehicles that meant 640 boundaries to serialise per render,
+// which trips Cloudflare's CPU limit (Error 1102). 25/page keeps the
+// budget comfortably below the threshold while staying practical.
+const PAGE_SIZE = 25;
+
 const fmtEgp = (n: number) =>
   new Intl.NumberFormat("en-EG", {
     style: "currency",
@@ -74,25 +81,48 @@ const ORDER_BY: Record<
   "brand-asc": { column: "brand", ascending: true, nullsFirst: false },
 };
 
+function parsePage(v: string | string[] | undefined): number {
+  const s = Array.isArray(v) ? v[0] : v;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
 export default async function VehiclesListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string | string[] }>;
+  searchParams: Promise<{ sort?: string | string[]; page?: string | string[] }>;
 }) {
-  const { sort: sortRaw } = await searchParams;
+  const { sort: sortRaw, page: pageRaw } = await searchParams;
   const sort = parseSort(sortRaw);
   const order = ORDER_BY[sort];
+  const page = parsePage(pageRaw);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
   const supabase = await createClient();
-  const { data: vehicles, error } = await supabase
+  const { data: vehicles, error, count } = await supabase
     .from("vehicles")
     .select(
       "id, slug, name, brand, trim, origin, type, body, price_egp, image_url, is_published, is_featured",
+      { count: "exact" },
     )
     .order(order.column, {
       ascending: order.ascending,
       nullsFirst: order.nullsFirst,
-    });
+    })
+    .range(from, to);
+
+  const total = count ?? vehicles?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const baseQs = new URLSearchParams();
+  if (sort !== "newest") baseQs.set("sort", sort);
+  const linkFor = (p: number) => {
+    const qs = new URLSearchParams(baseQs);
+    if (p > 1) qs.set("page", String(p));
+    const s = qs.toString();
+    return s ? `/admin/vehicles?${s}` : "/admin/vehicles";
+  };
 
   return (
     <>
@@ -102,7 +132,13 @@ export default async function VehiclesListPage({
             Vehi<em>cles</em>
           </h1>
           <p className="adm__sub">
-            {vehicles?.length ?? 0} vehicles · published &amp; unpublished
+            {total} vehicles · published &amp; unpublished
+            {totalPages > 1 && (
+              <>
+                {" · "}
+                page {safePage} of {totalPages}
+              </>
+            )}
           </p>
         </div>
         <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -246,6 +282,42 @@ export default async function VehiclesListPage({
         </table>
       ) : (
         <p className="adm__sub">No vehicles yet.</p>
+      )}
+
+      {totalPages > 1 && (
+        <nav
+          aria-label="Pagination"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: ".7rem",
+            marginTop: "1.4rem",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {safePage > 1 ? (
+            <Link href={linkFor(safePage - 1)} className="adm__btn adm__btn--ghost">
+              ← Previous
+            </Link>
+          ) : (
+            <span className="adm__btn adm__btn--ghost" aria-disabled style={{ opacity: 0.4 }}>
+              ← Previous
+            </span>
+          )}
+          <span style={{ color: "var(--stone)", fontSize: ".82rem" }}>
+            Page {safePage} of {totalPages}
+          </span>
+          {safePage < totalPages ? (
+            <Link href={linkFor(safePage + 1)} className="adm__btn adm__btn--ghost">
+              Next →
+            </Link>
+          ) : (
+            <span className="adm__btn adm__btn--ghost" aria-disabled style={{ opacity: 0.4 }}>
+              Next →
+            </span>
+          )}
+        </nav>
       )}
     </>
   );
