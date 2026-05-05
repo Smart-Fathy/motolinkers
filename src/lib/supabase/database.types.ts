@@ -209,15 +209,25 @@ export interface Database {
           started_at: string;
           last_message_at: string;
         };
+        // Required on insert: session_id + locale. Everything else
+        // has a DB default and is therefore optional.
         Insert: Omit<
           Database["public"]["Tables"]["motoagent_conversations"]["Row"],
-          "id" | "started_at" | "last_message_at" | "message_count" | "transcript"
+          | "id"
+          | "started_at"
+          | "last_message_at"
+          | "message_count"
+          | "transcript"
+          | "country"
+          | "lead_id"
         > & {
           id?: string;
           started_at?: string;
           last_message_at?: string;
           message_count?: number;
           transcript?: Json;
+          country?: string | null;
+          lead_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["motoagent_conversations"]["Row"]>;
         Relationships: [];

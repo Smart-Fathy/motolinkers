@@ -121,7 +121,7 @@ export default function MotoAgentWidget({
       });
       if (!res.ok) {
         const code = (await res.json().catch(() => ({}))) as { error?: string };
-        let msg = STR[locale].error;
+        let msg: string = STR[locale].error;
         if (code.error === "rate-limit-minute") msg = STR[locale].rateLimitMin;
         else if (code.error === "rate-limit-day") msg = STR[locale].rateLimitDay;
         setError(msg);
