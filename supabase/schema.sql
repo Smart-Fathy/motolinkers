@@ -177,6 +177,31 @@ create policy "Public read visible sections"
   using (is_visible = true);
 
 -- =====================================================================
+--  Analytics — page_events (see migrations/007)
+-- =====================================================================
+create table if not exists public.page_events (
+  id uuid primary key default gen_random_uuid(),
+  session_id text not null,
+  path text not null,
+  vehicle_slug text,
+  country text,
+  region text,
+  city text,
+  device text check (device in ('mobile','tablet','desktop')),
+  referrer_kind text check (referrer_kind in ('direct','search','social','other')),
+  is_new_visitor boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table public.page_events enable row level security;
+
+drop policy if exists "Anyone can insert a page event" on public.page_events;
+create policy "Anyone can insert a page event"
+  on public.page_events for insert
+  to anon, authenticated
+  with check (true);
+
+-- =====================================================================
 --  Seed: 15 vehicles from the reference design
 -- =====================================================================
 insert into public.vehicles (slug, name, origin, type, year, price_egp, transmission, drivetrain, image_url) values

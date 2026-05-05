@@ -179,6 +179,31 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["page_heroes"]["Row"]>;
         Relationships: [];
       };
+      page_events: {
+        Row: {
+          id: string;
+          session_id: string;
+          path: string;
+          vehicle_slug: string | null;
+          country: string | null;
+          region: string | null;
+          city: string | null;
+          device: "mobile" | "tablet" | "desktop" | null;
+          referrer_kind: "direct" | "search" | "social" | "other" | null;
+          is_new_visitor: boolean;
+          created_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["page_events"]["Row"],
+          "id" | "created_at" | "is_new_visitor"
+        > & {
+          id?: string;
+          created_at?: string;
+          is_new_visitor?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["page_events"]["Row"]>;
+        Relationships: [];
+      };
       page_sections: {
         Row: {
           id: string;
