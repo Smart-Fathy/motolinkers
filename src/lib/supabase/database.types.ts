@@ -179,6 +179,49 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["page_heroes"]["Row"]>;
         Relationships: [];
       };
+      motoagent_settings: {
+        Row: {
+          id: number;
+          is_enabled: boolean;
+          model: string;
+          temperature: number;
+          max_output_tokens: number;
+          system_prompt_extra: string;
+          greeting_en: string;
+          greeting_ar: string;
+          daily_message_cap_per_session: number;
+          per_minute_cap_per_session: number;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["motoagent_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["motoagent_settings"]["Row"]>;
+        Relationships: [];
+      };
+      motoagent_conversations: {
+        Row: {
+          id: string;
+          session_id: string;
+          locale: "en" | "ar";
+          country: string | null;
+          message_count: number;
+          transcript: Json;
+          lead_id: string | null;
+          started_at: string;
+          last_message_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["motoagent_conversations"]["Row"],
+          "id" | "started_at" | "last_message_at" | "message_count" | "transcript"
+        > & {
+          id?: string;
+          started_at?: string;
+          last_message_at?: string;
+          message_count?: number;
+          transcript?: Json;
+        };
+        Update: Partial<Database["public"]["Tables"]["motoagent_conversations"]["Row"]>;
+        Relationships: [];
+      };
       page_events: {
         Row: {
           id: string;
