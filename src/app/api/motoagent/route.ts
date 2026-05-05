@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { readSession, setSessionCookies } from "@/lib/cookies";
 import { cookies, headers } from "next/headers";
+import type { Json } from "@/lib/supabase/database.types";
 import {
   buildSystemPrompt,
   type MotoagentSettings,
@@ -155,6 +156,13 @@ export async function POST(req: Request) {
   };
   transcript = [...transcript, userMsg];
 
+  // Supabase types `transcript` as the widest Json shape, which our
+  // structured TranscriptMessage[] doesn't satisfy without going
+  // through unknown (TranscriptMessage lacks the [key]: Json | undefined
+  // index signature Json's object variant requires). The shape IS
+  // JSON-serialisable; this is purely a typing accommodation.
+  const transcriptForDb = transcript as unknown as Json;
+
   if (!conversationId) {
     const insertRes = await supabase
       .from("motoagent_conversations")
@@ -162,7 +170,7 @@ export async function POST(req: Request) {
         session_id: session.sessionId,
         locale,
         country,
-        transcript,
+        transcript: transcriptForDb,
         message_count: 1,
       })
       .select("id")
@@ -176,7 +184,7 @@ export async function POST(req: Request) {
     await supabase
       .from("motoagent_conversations")
       .update({
-        transcript,
+        transcript: transcriptForDb,
         message_count: transcript.length,
         last_message_at: new Date().toISOString(),
       })
@@ -284,7 +292,7 @@ export async function POST(req: Request) {
           const updateRes = await supabase
             .from("motoagent_conversations")
             .update({
-              transcript: finalTranscript,
+              transcript: finalTranscript as unknown as Json,
               message_count: finalTranscript.length,
               last_message_at: new Date().toISOString(),
             })
