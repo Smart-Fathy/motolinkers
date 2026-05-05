@@ -1,5 +1,11 @@
 import Link from "next/link";
 
+const SOCIALS = [
+  { label: "Facebook", href: "https://web.facebook.com/profile.php?id=61585199878906" },
+  { label: "Instagram", href: "https://www.instagram.com/motolinkers" },
+  { label: "TikTok", href: "https://www.tiktok.com/@motolinkers" },
+];
+
 export default function Footer() {
   return (
     <footer className="foot">
@@ -23,16 +29,58 @@ export default function Footer() {
                 color: "var(--bone)",
                 opacity: 0.7,
                 marginTop: ".4rem",
+                flexWrap: "wrap",
               }}
             >
               <a href="mailto:info@motolinkers.com" data-hover>
                 info@motolinkers.com
               </a>
               <span>·</span>
-              <a href="tel:+20100078104" data-hover>
-                +20 100 007 8104
+              <a href="tel:+201000078104" data-hover>
+                +20 100 000 78104
               </a>
             </div>
+            <div
+              style={{
+                display: "flex",
+                gap: ".7rem",
+                fontFamily: "var(--ff-mono)",
+                fontSize: ".74rem",
+                color: "var(--bone)",
+                opacity: 0.7,
+                marginTop: ".7rem",
+                flexWrap: "wrap",
+              }}
+            >
+              {SOCIALS.map((s, i) => (
+                <span
+                  key={s.label}
+                  style={{ display: "inline-flex", gap: ".7rem" }}
+                >
+                  {i > 0 && <span style={{ opacity: 0.5 }}>·</span>}
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-hover
+                  >
+                    {s.label}
+                  </a>
+                </span>
+              ))}
+            </div>
+            <p
+              style={{
+                fontSize: ".78rem",
+                color: "var(--stone)",
+                margin: ".9rem 0 0",
+                lineHeight: 1.5,
+              }}
+            >
+              Office (ACO2), Floor 4, Building 100,
+              <br />
+              Al-Mirghani Street, Heliopolis, Cairo
+            </p>
           </div>
 
           <div className="foot__col">
@@ -76,16 +124,6 @@ export default function Footer() {
             <ul>
               <li>
                 <Link href="/vehicles" data-hover>
-                  BYD
-                </Link>
-              </li>
-              <li>
-                <Link href="/vehicles" data-hover>
-                  Denza
-                </Link>
-              </li>
-              <li>
-                <Link href="/vehicles" data-hover>
                   Avatr
                 </Link>
               </li>
@@ -99,14 +137,35 @@ export default function Footer() {
                   Zeekr
                 </Link>
               </li>
+              <li>
+                <Link href="/vehicles" data-hover>
+                  Mazda
+                </Link>
+              </li>
+              <li>
+                <Link href="/vehicles" data-hover>
+                  GAC
+                </Link>
+              </li>
+              <li>
+                <Link href="/vehicles" data-hover>
+                  Changan
+                </Link>
+              </li>
+              <li>
+                <Link href="/vehicles" data-hover>
+                  ROX
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div className="foot__col">
             <h4>Hours</h4>
             <ul>
-              <li style={{ opacity: 0.85 }}>Sun – Thu</li>
-              <li style={{ opacity: 0.85 }}>11:00 – 23:00 EET</li>
+              <li style={{ opacity: 0.85 }}>Sun – Thu · 11:00 – 23:00</li>
+              <li style={{ opacity: 0.85 }}>Saturday · 15:00 – 23:00</li>
+              <li style={{ opacity: 0.6 }}>Friday · Closed</li>
               <li style={{ marginTop: ".5rem" }}>
                 <Link href="/contact" data-hover>
                   Subscribe

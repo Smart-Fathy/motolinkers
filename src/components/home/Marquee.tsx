@@ -9,16 +9,13 @@ export interface MarqueeData {
 
 export const MARQUEE_DEFAULT_DATA: MarqueeData = {
   items: [
-    { text: "BYD" },
-    { text: "Denza", italic: true },
     { text: "Avatr" },
-    { text: "Zeekr" },
     { text: "Deepal", italic: true },
-    { text: "Changan" },
+    { text: "Zeekr" },
+    { text: "Mazda", italic: true },
     { text: "GAC" },
-    { text: "Leapmotor", italic: true },
-    { text: "Nio" },
-    { text: "Xpeng", italic: true },
+    { text: "Changan", italic: true },
+    { text: "ROX" },
   ],
 };
 
