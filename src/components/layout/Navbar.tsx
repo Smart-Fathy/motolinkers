@@ -30,8 +30,12 @@ export default function Navbar() {
         aria-label="Primary"
       >
         <Link href="/" className="nav__logo" data-hover>
-          <span className="nav__logo-mark" aria-hidden="true" />
-          Moto<em>Linkers</em>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.motolinkers.com/avatar-11-max-reev/05_logo_copy-1__1_-removebg-preview2.png"
+            alt="MotoLinkers"
+            style={{ height: 36, width: "auto", display: "block" }}
+          />
         </Link>
         <div className="nav__links">
           {LINKS.map((l) => (
