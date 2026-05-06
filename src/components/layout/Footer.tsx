@@ -13,7 +13,12 @@ export default function Footer() {
         <div className="foot__top">
           <div className="foot__brand">
             <div className="foot__logo">
-              Moto<em>Linkers</em>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.motolinkers.com/avatar-11-max-reev/05_logo_copy-1__1_-removebg-preview2.png"
+                alt="MotoLinkers"
+                style={{ height: 44, width: "auto", display: "block" }}
+              />
             </div>
             <p className="foot__tag">
               Egypt-based automotive supply-chain consultancy, connecting
