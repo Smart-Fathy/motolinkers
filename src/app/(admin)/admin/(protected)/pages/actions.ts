@@ -6,6 +6,7 @@ import { isValidPageSlug, PAGE_REGISTRY } from "./PAGE_REGISTRY";
 import type { PageSlug } from "@/lib/repositories/pages";
 import type { Json } from "@/lib/supabase/database.types";
 import { sanitiseInlineHtml } from "@/lib/cms-html";
+import { sanitiseStyle, type SectionStyle } from "@/lib/cms-style";
 
 // All admin actions return this discriminated union so callers can use
 // `if (!result.ok) setError(result.error)` and TS narrows reliably.
@@ -132,6 +133,29 @@ function fdString(formData: FormData, key: string, fallback = ""): string {
   return typeof v === "string" ? v : fallback;
 }
 
+// Pull the optional Typography block submitted by StyleFields. Returns
+// undefined when nothing is set so we don't bloat the JSON.
+function readSectionStyle(formData: FormData): SectionStyle | undefined {
+  return sanitiseStyle({
+    font_size: fdString(formData, "style.font_size"),
+    font_weight: fdString(formData, "style.font_weight"),
+    font_style: fdString(formData, "style.font_style"),
+    color: fdString(formData, "style.color"),
+    align: fdString(formData, "style.align"),
+  });
+}
+
+// Merge a typed payload with an optional style block. Centralising the
+// merge keeps every case in readSectionData uniform.
+function withStyle(
+  payload: { [key: string]: Json },
+  formData: FormData,
+): { [key: string]: Json } {
+  const style = readSectionStyle(formData);
+  if (!style) return payload;
+  return { ...payload, style: style as unknown as Json };
+}
+
 function readCtaItem(
   formData: FormData,
   prefix: string,
@@ -151,26 +175,32 @@ function readSectionData(
 ): { [key: string]: Json } {
   switch (type) {
     case "paragraph":
-      return {
-        text: fdString(formData, "text"),
-        align: formData.get("align") === "center" ? "center" : "left",
-      };
+      return withStyle(
+        { text: fdString(formData, "text") },
+        formData,
+      );
 
     case "image":
-      return {
-        url: fdString(formData, "url").trim(),
-        alt: fdString(formData, "alt").trim(),
-        width_pct: clampInt(formData.get("width_pct"), 20, 100, 100),
-        border_radius_px: clampInt(formData.get("border_radius_px"), 0, 64, 12),
-        opacity: Number(clampNum(formData.get("opacity"), 0.1, 1, 1).toFixed(2)),
-        caption: fdString(formData, "caption").trim(),
-      };
+      return withStyle(
+        {
+          url: fdString(formData, "url").trim(),
+          alt: fdString(formData, "alt").trim(),
+          width_pct: clampInt(formData.get("width_pct"), 20, 100, 100),
+          border_radius_px: clampInt(formData.get("border_radius_px"), 0, 64, 12),
+          opacity: Number(clampNum(formData.get("opacity"), 0.1, 1, 1).toFixed(2)),
+          caption: fdString(formData, "caption").trim(),
+        },
+        formData,
+      );
 
     case "page_header":
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+        },
+        formData,
+      );
 
     case "hero_block": {
       const titleLines = harvestArray(formData, "title_lines", (fd, p) => {
@@ -190,20 +220,23 @@ function readSectionData(
         if (value_suffix) item.value_suffix = value_suffix;
         return item;
       });
-      return {
-        meta: {
-          col1_top: fdString(formData, "meta.col1_top").trim(),
-          col1_bot: fdString(formData, "meta.col1_bot").trim(),
-          col2_top: fdString(formData, "meta.col2_top").trim(),
-          col2_bot: fdString(formData, "meta.col2_bot").trim(),
+      return withStyle(
+        {
+          meta: {
+            col1_top: fdString(formData, "meta.col1_top").trim(),
+            col1_bot: fdString(formData, "meta.col1_bot").trim(),
+            col2_top: fdString(formData, "meta.col2_top").trim(),
+            col2_bot: fdString(formData, "meta.col2_bot").trim(),
+          },
+          title_lines: titleLines,
+          aria_label: fdString(formData, "aria_label").trim(),
+          lede_html: sanitiseInlineHtml(fdString(formData, "lede_html").trim()),
+          ctas,
+          ticker,
+          scroll_label: fdString(formData, "scroll_label").trim() || "Scroll",
         },
-        title_lines: titleLines,
-        aria_label: fdString(formData, "aria_label").trim(),
-        lede_html: sanitiseInlineHtml(fdString(formData, "lede_html").trim()),
-        ctas,
-        ticker,
-        scroll_label: fdString(formData, "scroll_label").trim() || "Scroll",
-      };
+        formData,
+      );
     }
 
     case "marquee": {
@@ -213,7 +246,7 @@ function readSectionData(
         const italic = formData.get(`${p}.italic`) === "on";
         return italic ? { text, italic: true } : { text };
       });
-      return { items };
+      return withStyle({ items }, formData);
     }
 
     case "manifesto": {
@@ -228,28 +261,37 @@ function readSectionData(
         if (!number && !title && !body) return null;
         return { number, title, body };
       });
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-        body_paragraphs_html,
-        pillars,
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+          body_paragraphs_html,
+          pillars,
+        },
+        formData,
+      );
     }
 
     case "fleet_grid":
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-        subtitle: fdString(formData, "subtitle").trim(),
-        mode: formData.get("mode") === "all" ? "all" : "featured",
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+          subtitle: fdString(formData, "subtitle").trim(),
+          mode: formData.get("mode") === "all" ? "all" : "featured",
+        },
+        formData,
+      );
 
     case "calculator_widget":
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-        subtitle: fdString(formData, "subtitle").trim(),
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+          subtitle: fdString(formData, "subtitle").trim(),
+        },
+        formData,
+      );
 
     case "routes": {
       const routes = harvestArray(formData, "routes", (fd, p) => {
@@ -309,11 +351,14 @@ function readSectionData(
           },
         };
       });
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-        routes,
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+          routes,
+        },
+        formData,
+      );
     }
 
     case "process": {
@@ -324,11 +369,14 @@ function readSectionData(
         if (!number && !title && !body) return null;
         return { number, title, body };
       });
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-        steps,
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+          steps,
+        },
+        formData,
+      );
     }
 
     case "testimonials": {
@@ -340,11 +388,14 @@ function readSectionData(
         if (!initials && !name && !quote) return null;
         return { initials, name, role, quote };
       });
-      return {
-        kicker: fdString(formData, "kicker").trim(),
-        title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
-        items,
-      };
+      return withStyle(
+        {
+          kicker: fdString(formData, "kicker").trim(),
+          title_html: sanitiseInlineHtml(fdString(formData, "title_html").trim()),
+          items,
+        },
+        formData,
+      );
     }
 
     case "stats_grid": {
@@ -355,7 +406,7 @@ function readSectionData(
         if (!label) return null;
         return { target, suffix, label };
       });
-      return { items };
+      return withStyle({ items }, formData);
     }
 
     case "cta_block": {
@@ -367,14 +418,17 @@ function readSectionData(
         ctas,
       };
       if (arabic_accent) out.arabic_accent = arabic_accent;
-      return out;
+      return withStyle(out, formData);
     }
 
     case "qa":
-      return {
-        question: fdString(formData, "question").trim(),
-        answer_html: sanitiseInlineHtml(fdString(formData, "answer_html").trim()),
-      };
+      return withStyle(
+        {
+          question: fdString(formData, "question").trim(),
+          answer_html: sanitiseInlineHtml(fdString(formData, "answer_html").trim()),
+        },
+        formData,
+      );
 
     case "legal_clause": {
       const list_items = harvestArray(formData, "list_items", (fd, p) => {
@@ -386,7 +440,7 @@ function readSectionData(
         body_html: sanitiseInlineHtml(fdString(formData, "body_html").trim()),
       };
       if (list_items.length > 0) out.list_items = list_items;
-      return out;
+      return withStyle(out, formData);
     }
   }
 }

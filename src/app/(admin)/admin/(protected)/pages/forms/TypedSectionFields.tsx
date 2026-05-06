@@ -9,6 +9,7 @@ import {
   CheckField,
 } from "./fields/Fields";
 import { RepeaterField } from "./fields/RepeaterField";
+import { StyleFields } from "./fields/StyleFields";
 
 // Each per-type fields component renders the right inputs for a single
 // section's `data` shape. The parent submits the form via FormData;
@@ -627,24 +628,13 @@ function RoutesFields({ data }: { data: Data }) {
 // ─── existing types kept here for the dispatcher ──────────────────
 function ParagraphFields({ data }: { data: Data }) {
   return (
-    <>
-      <TextareaField
-        label="Text"
-        name="text"
-        rows={6}
-        defaultValue={asString(data.text)}
-        placeholder="Use a blank line to separate paragraphs."
-      />
-      <SelectField
-        label="Alignment"
-        name="align"
-        defaultValue={asString(data.align, "left")}
-        options={[
-          { value: "left", label: "Left" },
-          { value: "center", label: "Center" },
-        ]}
-      />
-    </>
+    <TextareaField
+      label="Text"
+      name="text"
+      rows={6}
+      defaultValue={asString(data.text)}
+      placeholder="Use a blank line to separate paragraphs."
+    />
   );
 }
 
@@ -689,14 +679,7 @@ void ParagraphFields;
 void ImageFields;
 void asBool;
 
-export default function TypedSectionFields({
-  type,
-  data,
-}: {
-  type: string;
-  data: unknown;
-}) {
-  const d: Data = (data ?? {}) as Data;
+function renderTypeFields(type: string, d: Data) {
   switch (type) {
     case "paragraph":
       return <ParagraphFields data={d} />;
@@ -729,10 +712,48 @@ export default function TypedSectionFields({
     case "routes":
       return <RoutesFields data={d} />;
     default:
-      return (
-        <p style={{ color: "var(--stone)", fontSize: ".9rem" }}>
-          This section type isn&rsquo;t editable yet.
-        </p>
-      );
+      return null;
   }
+}
+
+const SECTIONS_WITH_STYLE = new Set([
+  "paragraph",
+  "image",
+  "page_header",
+  "marquee",
+  "qa",
+  "legal_clause",
+  "calculator_widget",
+  "fleet_grid",
+  "stats_grid",
+  "cta_block",
+  "process",
+  "manifesto",
+  "testimonials",
+  "hero_block",
+  "routes",
+]);
+
+export default function TypedSectionFields({
+  type,
+  data,
+}: {
+  type: string;
+  data: unknown;
+}) {
+  const d: Data = (data ?? {}) as Data;
+  const fields = renderTypeFields(type, d);
+  if (!fields) {
+    return (
+      <p style={{ color: "var(--stone)", fontSize: ".9rem" }}>
+        This section type isn&rsquo;t editable yet.
+      </p>
+    );
+  }
+  return (
+    <>
+      {fields}
+      {SECTIONS_WITH_STYLE.has(type) && <StyleFields data={d} />}
+    </>
+  );
 }
