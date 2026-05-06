@@ -16,11 +16,9 @@
 }
 .adm__brand{
   font-family:var(--ff-display); font-size:1.4rem; letter-spacing:-.02em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;
   margin:0 .4rem 1.6rem; color:var(--bone);
 }
 .adm__brand em{font-style:italic; color:var(--volt);
-  font-variation-settings:"opsz" 144, "WONK" 1}
 .adm__nav-link{
   display:block; padding:.6rem .85rem; border-radius:8px;
   font-size:.92rem; color:var(--bone); opacity:.7;
@@ -67,11 +65,9 @@
 .adm__h1{
   font-family:var(--ff-display); font-weight:400;
   font-size:clamp(1.6rem, 2.4vw, 2.1rem); letter-spacing:-.02em;
-  font-variation-settings:"opsz" 48, "SOFT" 50;
   color:var(--bone); margin:0;
 }
 .adm__h1 em{font-style:italic; color:var(--volt);
-  font-variation-settings:"opsz" 48, "SOFT" 100, "WONK" 1}
 .adm__sub{color:var(--stone); margin:.3rem 0 0; font-size:.92rem}
 .adm__page-head{
   display:flex; justify-content:space-between; align-items:flex-end;
@@ -95,7 +91,6 @@
 .adm__stat-value{
   font-family:var(--ff-display); font-weight:500;
   font-size:clamp(1.8rem, 3vw, 2.4rem); line-height:1; letter-spacing:-.02em;
-  font-variation-settings:"opsz" 48, "SOFT" 50; color:var(--volt);
 }
 
 /* Tables */
@@ -185,10 +180,8 @@
 .adm-login__title{
   font-family:var(--ff-display); font-weight:400; font-size:1.5rem;
   margin:0; letter-spacing:-.02em;
-  font-variation-settings:"opsz" 48, "SOFT" 50;
 }
 .adm-login__title em{font-style:italic; color:var(--volt);
-  font-variation-settings:"opsz" 48, "WONK" 1}
 
 /* Pill (yes/no) */
 .adm__pill{
@@ -344,7 +337,6 @@
   display:flex; align-items:center; gap:.75rem;
   font-family:var(--ff-display); font-weight:400; font-size:1.05rem;
   color:var(--bone); letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
 }
 .imp__variant-actions{
   display:flex; gap:.5rem; flex-wrap:wrap;

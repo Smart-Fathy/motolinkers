@@ -34,8 +34,8 @@
   --line-strong: rgba(232,208,140,.24);
 
   /* Type — values are filled in by next/font in layout.tsx */
-  --ff-display: var(--font-fraunces), "Fraunces", "Times New Roman", serif;
-  --ff-sans: var(--font-geist), "Geist", ui-sans-serif, system-ui, sans-serif;
+  --ff-display: var(--font-poppins), "Poppins", ui-sans-serif, sans-serif;
+  --ff-sans: var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --ff-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, Menlo, monospace;
 
   /* Spacing */
@@ -103,8 +103,8 @@ a{color:inherit;text-decoration:none}
   padding:2rem clamp(1rem,4vw,3rem);
 }
 .loader__mark{font-family:var(--ff-display);font-size:clamp(3rem,14vw,8rem);
-  font-weight:300;font-variation-settings:"SOFT" 100, "opsz" 144;letter-spacing:-.04em;line-height:.9}
-.loader__mark em{font-style:italic;color:var(--volt);font-variation-settings:"SOFT" 100, "opsz" 144, "WONK" 1}
+  font-weight:400;letter-spacing:-.02em;line-height:.9}
+.loader__mark em{font-style:italic;color:var(--volt)}
 .loader__pct{font-family:var(--ff-mono);font-size:1rem;letter-spacing:.02em;color:var(--bone)}
 .loader__bar{
   position:fixed;left:0;bottom:0;height:2px;width:100%;background:transparent;
@@ -131,9 +131,8 @@ a{color:inherit;text-decoration:none}
 .nav__logo{
   display:flex;align-items:baseline;gap:.55rem;font-family:var(--ff-display);
   font-weight:400;font-size:1.35rem;letter-spacing:-.02em;
-  font-variation-settings:"opsz" 144, "SOFT" 100;
 }
-.nav__logo em{font-style:italic;color:var(--volt);font-variation-settings:"opsz" 144, "WONK" 1}
+.nav__logo em{font-style:italic;color:var(--volt)}
 .nav__logo-mark{
   width:28px;height:28px;border-radius:50%;
   background:conic-gradient(from 180deg, var(--volt), var(--bone), var(--volt));
@@ -186,8 +185,7 @@ a{color:inherit;text-decoration:none}
 .menu-panel__list{display:flex;flex-direction:column;gap:1rem;margin-top:1.5rem}
 .menu-panel__list a{
   font-family:var(--ff-display);font-size:clamp(2.2rem,11vw,4rem);
-  font-weight:300;font-variation-settings:"opsz" 144, "SOFT" 50;
-  letter-spacing:-.03em;line-height:1;
+  font-weight:400;letter-spacing:-.015em;line-height:1;
   padding:.6rem 0;border-bottom:1px solid var(--line);
 }
 .menu-panel__list a em{font-style:italic;color:var(--volt)}
@@ -256,9 +254,8 @@ section{position:relative}
 .hero__title{
   font-family:var(--ff-display);
   font-size:clamp(3.5rem, 13vw, 11.5rem);
-  line-height:.88;letter-spacing:-.04em;
-  font-weight:300;
-  font-variation-settings:"opsz" 144, "SOFT" 50;
+  line-height:.88;letter-spacing:-.02em;
+  font-weight:400;
   color:var(--bone);
   margin:0;
   max-width:14ch;
@@ -267,7 +264,6 @@ section{position:relative}
 .hero__title .line > span{display:inline-block;transform:translateY(110%)}
 .hero__title em{
   font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1;
   position:relative;
 }
 .hero__title .strike{text-decoration:line-through;text-decoration-thickness:2px;color:var(--stone);font-style:normal}
@@ -281,7 +277,6 @@ section{position:relative}
   color:var(--bone);opacity:.75;
 }
 .hero__lede em{color:var(--volt);font-style:normal;font-family:var(--ff-display);
-  font-variation-settings:"opsz" 14, "SOFT" 100}
 .hero__ctas{display:flex;gap:.8rem;flex-wrap:wrap}
 
 .btn{
@@ -335,10 +330,9 @@ section{position:relative}
 .marquee__item{
   display:inline-flex;align-items:center;gap:1rem;
   font-family:var(--ff-display);font-size:clamp(1.8rem,4vw,3.2rem);
-  font-weight:300;font-variation-settings:"opsz" 144, "SOFT" 80;
-  letter-spacing:-.02em;color:var(--bone);
+  font-weight:400;letter-spacing:-.01em;color:var(--bone);
 }
-.marquee__item em{font-style:italic;color:var(--volt);font-variation-settings:"opsz" 144, "WONK" 1}
+.marquee__item em{font-style:italic;color:var(--volt)}
 .marquee__dot{width:10px;height:10px;border-radius:50%;background:var(--volt);flex-shrink:0}
 @keyframes scroll-x{to{transform:translateX(-50%)}}
 
@@ -360,12 +354,10 @@ section{position:relative}
 .manifesto__kicker{font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.2em;
   text-transform:uppercase;color:var(--stone);margin-bottom:2rem}
 .manifesto__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);margin:0;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.02em;
 }
 .manifesto__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 .manifesto__body{
   font-size:clamp(1.05rem,1.15vw,1.2rem);line-height:1.55;
   color:var(--bone);opacity:.8;max-width:48ch;
@@ -388,7 +380,6 @@ section{position:relative}
   color:var(--volt);margin-bottom:2rem}
 .pillar__title{font-family:var(--ff-display);font-weight:400;
   font-size:1.35rem;margin-bottom:.6rem;color:var(--bone);
-  font-variation-settings:"opsz" 24, "SOFT" 50}
 .pillar__text{font-size:.92rem;line-height:1.55;color:var(--stone);margin:0}
 
 /* =======================================================================
@@ -401,12 +392,10 @@ section{position:relative}
 }
 @media (max-width:700px){.fleet__head{grid-template-columns:1fr}}
 .fleet__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);margin:0;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.02em;
 }
 .fleet__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 .fleet__sub{max-width:36ch;color:var(--bone);opacity:.65;font-size:1rem;line-height:1.5;margin:0}
 
 .fleet__filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2.5rem}
@@ -444,7 +433,6 @@ section{position:relative}
 .car__title{
   font-family:var(--ff-display);font-weight:400;font-size:1.05rem;
   line-height:1.25;color:var(--bone);margin:0;letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .car__price-row{
@@ -454,7 +442,6 @@ section{position:relative}
 .car__price{
   font-family:var(--ff-display);font-weight:500;font-size:1.05rem;
   letter-spacing:-.01em;color:var(--bone);
-  font-variation-settings:"opsz" 24, "SOFT" 50;
 }
 .car__price small{font-family:var(--ff-mono);font-weight:400;font-size:.62rem;
   letter-spacing:.1em;color:var(--stone);margin-left:.35rem;text-transform:uppercase}
@@ -483,12 +470,10 @@ section{position:relative}
 }
 @media (max-width:900px){.calc__head{grid-template-columns:1fr;gap:2rem}}
 .calc__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.02em;
 }
 .calc__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 .calc__sub{max-width:42ch;color:var(--bone);opacity:.7;font-size:1rem;line-height:1.55}
 
 .calc__shell{
@@ -524,7 +509,6 @@ section{position:relative}
 .step-panel h3{
   font-family:var(--ff-display);font-weight:400;font-size:clamp(1.5rem,2.5vw,2.2rem);
   margin:0 0 .5rem;color:var(--bone);letter-spacing:-.02em;
-  font-variation-settings:"opsz" 48, "SOFT" 50;
 }
 .step-panel .hint{color:var(--stone);font-size:.92rem;margin:0 0 1.8rem}
 
@@ -583,7 +567,6 @@ section{position:relative}
 .results__total-value{
   font-family:var(--ff-display);font-weight:500;font-size:clamp(2rem,5vw,3.5rem);
   line-height:1;letter-spacing:-.03em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;
 }
 .results__total-sub{margin-top:.5rem;font-size:.9rem;opacity:.8}
 .results__total-conversion{
@@ -606,12 +589,10 @@ section{position:relative}
 ======================================================================= */
 .routes{padding:var(--sp-section) 0;background:var(--ink-2);color:var(--bone);position:relative}
 .routes__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);margin:0 0 3rem;max-width:18ch;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.02em;
 }
 .routes__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 .routes__grid{
   display:grid;grid-template-columns:1fr 1fr;gap:2rem;
 }
@@ -629,7 +610,6 @@ section{position:relative}
   display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;
   font-family:var(--ff-display);font-weight:400;font-size:clamp(1.3rem,2.2vw,1.8rem);
   color:var(--bone);letter-spacing:-.015em;
-  font-variation-settings:"opsz" 48, "SOFT" 50;
 }
 .route__arrow{color:var(--volt);font-size:1.3em;line-height:1}
 .route__flag{
@@ -657,9 +637,7 @@ section{position:relative}
 .route__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding-top:1.5rem;border-top:1px solid var(--line)}
 .route__stat-label{font-family:var(--ff-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--stone);margin-bottom:.3rem}
 .route__stat-value{font-family:var(--ff-display);font-weight:500;font-size:clamp(1.3rem,2vw,1.7rem);letter-spacing:-.02em;color:var(--bone);
-  font-variation-settings:"opsz" 24, "SOFT" 50}
 .route__stat-value em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 24, "SOFT" 100, "WONK" 1}
 
 /* =======================================================================
    PROCESS
@@ -667,12 +645,10 @@ section{position:relative}
 .process{padding:var(--sp-section) 0;background:var(--ink);color:var(--bone);position:relative}
 .process__head{margin-bottom:5rem;max-width:26ch}
 .process__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0 0 1.2rem;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.02em;
 }
 .process__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 
 .process__rail{
   position:relative;padding-left:0;
@@ -694,13 +670,11 @@ section{position:relative}
   background:var(--ink);border:1px solid var(--line-strong);
   font-family:var(--ff-display);font-weight:500;font-size:1.5rem;
   color:var(--bone);margin-bottom:1.5rem;transition:all .5s;
-  font-variation-settings:"opsz" 24, "SOFT" 50, "WONK" 1;font-style:italic;
 }
 .step-card.is-active .step-card__num{background:var(--volt);color:var(--ink);border-color:var(--volt)}
 .step-card__title{
   font-family:var(--ff-display);font-weight:400;font-size:clamp(1.15rem,1.6vw,1.5rem);
   color:var(--bone);margin:0 0 .6rem;letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
 }
 .step-card__text{font-size:.92rem;line-height:1.6;color:var(--stone);margin:0}
 
@@ -709,12 +683,10 @@ section{position:relative}
 ======================================================================= */
 .words{padding:var(--sp-section) 0;background:var(--ink-2);color:var(--bone)}
 .words__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.035em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);margin:0 0 4rem;max-width:20ch;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.4rem,5.5vw,5rem);line-height:.95;letter-spacing:-.02em;
 }
 .words__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 
 .words__grid{
   columns:2 320px;column-gap:1.5rem;
@@ -729,12 +701,10 @@ section{position:relative}
 .quote__mark{
   font-family:var(--ff-display);font-style:italic;font-weight:400;
   color:var(--volt);font-size:3rem;line-height:.5;margin-bottom:.8rem;
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1;
 }
 .quote__text{
-  font-family:var(--ff-display);font-weight:300;font-size:clamp(1.1rem,1.4vw,1.35rem);
+  font-family:var(--ff-display);font-weight:400;font-size:clamp(1.1rem,1.4vw,1.35rem);
   line-height:1.35;letter-spacing:-.01em;color:var(--bone);margin:0 0 1.4rem;
-  font-variation-settings:"opsz" 32, "SOFT" 50;
 }
 .quote__by{display:flex;align-items:center;gap:.8rem;padding-top:1rem;border-top:1px solid var(--line)}
 .quote__avatar{
@@ -768,12 +738,10 @@ section{position:relative}
 }
 .stat:hover{background:rgba(201,168,76,.05)}
 .stat__value{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.5rem,5.5vw,4.5rem);line-height:1;letter-spacing:-.04em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;color:var(--bone);
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.5rem,5.5vw,4.5rem);line-height:1;letter-spacing:-.02em;
 }
 .stat__value em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 .stat__label{
   font-family:var(--ff-mono);font-size:.74rem;letter-spacing:.12em;
   text-transform:uppercase;color:var(--stone);
@@ -803,12 +771,10 @@ section{position:relative}
   pointer-events:none;
 }
 .cta__title{
-  font-family:var(--ff-display);font-weight:300;
-  font-size:clamp(2.6rem,6.5vw,6rem);line-height:.9;letter-spacing:-.04em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;margin:0 0 2rem;max-width:16ch;position:relative;
+  font-family:var(--ff-display);font-weight:400;
+  font-size:clamp(2.6rem,6.5vw,6rem);line-height:.9;letter-spacing:-.02em;
 }
 .cta__title em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "SOFT" 100, "WONK" 1}
 .cta__body{max-width:48ch;color:var(--bone);opacity:.75;font-size:1.05rem;line-height:1.55;margin:0 0 2.2rem;position:relative}
 .cta__ctas{display:flex;gap:.8rem;flex-wrap:wrap;position:relative}
 
@@ -825,10 +791,8 @@ section{position:relative}
 .foot__brand{display:flex;flex-direction:column;gap:1.2rem;max-width:36ch}
 .foot__logo{
   font-family:var(--ff-display);font-weight:400;font-size:1.8rem;letter-spacing:-.02em;
-  font-variation-settings:"opsz" 144, "SOFT" 50;display:flex;align-items:baseline;gap:.5rem;
 }
 .foot__logo em{font-style:italic;color:var(--volt);
-  font-variation-settings:"opsz" 144, "WONK" 1}
 .foot__tag{color:var(--stone);font-size:.95rem;line-height:1.5}
 .foot__col h4{
   font-family:var(--ff-mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
@@ -859,12 +823,10 @@ section{position:relative}
 .long-prose h2{
   font-family:var(--ff-display);font-weight:400;font-size:clamp(1.6rem,2.4vw,2.2rem);
   letter-spacing:-.02em;color:var(--bone);margin:2.4rem 0 .8rem;
-  font-variation-settings:"opsz" 48, "SOFT" 50;
 }
 .long-prose h3{
   font-family:var(--ff-display);font-weight:400;font-size:1.25rem;
   color:var(--bone);margin:1.6rem 0 .5rem;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
 }
 .long-prose p{margin:0 0 1.1em}
 .long-prose a{color:var(--volt);border-bottom:1px solid rgba(201,168,76,.4);transition:border-color .3s}
@@ -902,7 +864,6 @@ section{position:relative}
 .vbrowse__panel-title{
   font-family:var(--ff-display); font-weight:400; font-size:1.4rem;
   color:var(--bone); margin:0; letter-spacing:-.015em;
-  font-variation-settings:"opsz" 32, "SOFT" 50;
 }
 .vbrowse__panel-close{
   width:36px; height:36px; border-radius:50%;
@@ -1152,7 +1113,6 @@ section{position:relative}
 .vehicle-detail__features-group h3{
   font-family:var(--ff-display); font-weight:400;
   font-size:1.1rem; color:var(--volt); letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
   margin:0 0 .8rem; padding-bottom:.5rem;
   border-bottom:1px solid var(--line);
 }
@@ -1253,7 +1213,6 @@ section{position:relative}
   font-family:var(--ff-display); font-weight:400;
   font-size:1.1rem; color:var(--bone); margin:0;
   letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .vbrowse__row-titles p{
@@ -1272,7 +1231,6 @@ section{position:relative}
 .vbrowse__row-price strong{
   font-family:var(--ff-display); font-weight:500; font-size:1.05rem;
   color:var(--volt); letter-spacing:-.01em;
-  font-variation-settings:"opsz" 24, "SOFT" 50;
 }
 .vbrowse__row-cta{
   font-family:var(--ff-mono); font-size:.7rem; letter-spacing:.08em;
