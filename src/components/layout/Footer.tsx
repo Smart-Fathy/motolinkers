@@ -17,7 +17,7 @@ export default function Footer() {
               <img
                 src="https://images.motolinkers.com/avatar-11-max-reev/05_logo_copy-1__1_-removebg-preview2.png"
                 alt="MotoLinkers"
-                style={{ height: 44, width: "auto", display: "block" }}
+                style={{ height: 64, width: "auto", display: "block" }}
               />
             </div>
             <p className="foot__tag">

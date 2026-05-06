@@ -34,7 +34,7 @@ export default function Navbar() {
           <img
             src="https://images.motolinkers.com/avatar-11-max-reev/05_logo_copy-1__1_-removebg-preview2.png"
             alt="MotoLinkers"
-            style={{ height: 36, width: "auto", display: "block" }}
+            style={{ height: 56, width: "auto", display: "block" }}
           />
         </Link>
         <div className="nav__links">
