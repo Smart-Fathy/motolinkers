@@ -18,7 +18,7 @@
   font-family:var(--ff-display); font-size:1.4rem; letter-spacing:-.02em;
   margin:0 .4rem 1.6rem; color:var(--bone);
 }
-.adm__brand em{font-style:italic; color:var(--volt);
+.adm__brand em{font-style:italic; color:var(--volt)}
 .adm__nav-link{
   display:block; padding:.6rem .85rem; border-radius:8px;
   font-size:.92rem; color:var(--bone); opacity:.7;
@@ -67,7 +67,7 @@
   font-size:clamp(1.6rem, 2.4vw, 2.1rem); letter-spacing:-.02em;
   color:var(--bone); margin:0;
 }
-.adm__h1 em{font-style:italic; color:var(--volt);
+.adm__h1 em{font-style:italic; color:var(--volt)}
 .adm__sub{color:var(--stone); margin:.3rem 0 0; font-size:.92rem}
 .adm__page-head{
   display:flex; justify-content:space-between; align-items:flex-end;
@@ -90,7 +90,7 @@
 }
 .adm__stat-value{
   font-family:var(--ff-display); font-weight:500;
-  font-size:clamp(1.8rem, 3vw, 2.4rem); line-height:1; letter-spacing:-.02em;
+  font-size:clamp(1.8rem, 3vw, 2.4rem); line-height:1; letter-spacing:-.02em; color:var(--volt);
 }
 
 /* Tables */
@@ -181,7 +181,7 @@
   font-family:var(--ff-display); font-weight:400; font-size:1.5rem;
   margin:0; letter-spacing:-.02em;
 }
-.adm-login__title em{font-style:italic; color:var(--volt);
+.adm-login__title em{font-style:italic; color:var(--volt)}
 
 /* Pill (yes/no) */
 .adm__pill{
