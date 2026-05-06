@@ -41,7 +41,7 @@ export default function Sidebar({ email }: { email: string | null }) {
           <img
             src="https://images.motolinkers.com/avatar-11-max-reev/05_logo_copy-1__1_-removebg-preview2.png"
             alt="MotoLinkers"
-            style={{ height: 32, width: "auto", display: "block" }}
+            style={{ height: 48, width: "auto", display: "block" }}
           />
         </h1>
         {NAV.map((n) => (
