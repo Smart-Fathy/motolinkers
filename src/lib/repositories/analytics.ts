@@ -2,11 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { createPublicClient } from "@/lib/supabase/public";
-import {
-  readSession,
-  setSessionCookies,
-  type SessionPair,
-} from "@/lib/cookies";
+import { readSession, setSessionCookies } from "@/lib/cookies";
 
 // recordPageEvent — server action invoked by the client beacon on
 // every public page render. We don't need an async result on the
@@ -162,5 +158,3 @@ function classifyReferrer(referer: string): "direct" | "search" | "social" | "ot
   return "other";
 }
 
-// Re-export for unit-test access if we add tests later.
-export type { SessionPair };
