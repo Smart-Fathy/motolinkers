@@ -58,9 +58,18 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   const [slug, setSlug] = useState(vehicle?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
   const [imageUrl, setImageUrl] = useState(vehicle?.image_url ?? "");
+  // The generated Database types may not yet know about spin_frames /
+  // pano_url (run `supabase gen types` to refresh). Cast for the read.
+  const extras = vehicle as
+    | (Vehicle & { spin_frames?: unknown; pano_url?: string | null })
+    | undefined;
   const [gallery, setGallery] = useState<string[]>(() =>
     coerceGallery(vehicle?.gallery),
   );
+  const [spinFrames, setSpinFrames] = useState<string[]>(() =>
+    coerceGallery(extras?.spin_frames),
+  );
+  const [panoUrl, setPanoUrl] = useState(extras?.pano_url ?? "");
   const [features, setFeatures] = useState<{ section: string; items: string }[]>(
     () => {
       const f = coerceFeatures(vehicle?.features);
@@ -81,8 +90,12 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [gallerySyncing, setGallerySyncing] = useState(false);
   const [galleryUrlDraft, setGalleryUrlDraft] = useState("");
+  const [spinUploading, setSpinUploading] = useState(false);
+  const [panoUploading, setPanoUploading] = useState(false);
   const coverFileRef = useRef<HTMLInputElement | null>(null);
   const galleryFileRef = useRef<HTMLInputElement | null>(null);
+  const spinFileRef = useRef<HTMLInputElement | null>(null);
+  const panoFileRef = useRef<HTMLInputElement | null>(null);
 
   const onNameChange = (v: string) => {
     setName(v);
@@ -121,6 +134,80 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     if (!file) return;
     void uploadFor(file, setCoverUploading, (url) => setImageUrl(url));
   };
+
+  const onPanoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!slug) {
+      setError("Enter a slug first — uploads are stored under <slug>/<filename>.");
+      return;
+    }
+    setError(null);
+    setPanoUploading(true);
+    (async () => {
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("slug", slug);
+        fd.append("folder", "pano");
+        const result = await uploadVehicleImage(fd);
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
+        setPanoUrl(result.url);
+      } finally {
+        setPanoUploading(false);
+      }
+    })();
+  };
+
+  const onSpinFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    if (!slug) {
+      setError("Enter a slug first — uploads are stored under <slug>/<filename>.");
+      return;
+    }
+    // Sort numerically by filename so 01.jpg, 02.jpg, … 10.jpg upload
+    // in capture order even if the OS hands them back unordered.
+    files.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { numeric: true }),
+    );
+    setSpinUploading(true);
+    setError(null);
+    (async () => {
+      const next = [...spinFrames];
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("slug", slug);
+        fd.append("folder", "spin");
+        const result = await uploadVehicleImage(fd);
+        if ("error" in result) {
+          setError(result.error);
+          break;
+        }
+        next.push(result.url);
+      }
+      setSpinFrames(next);
+      setSpinUploading(false);
+    })();
+  };
+
+  const removeSpinFrame = (idx: number) =>
+    setSpinFrames((s) => s.filter((_, i) => i !== idx));
+  const moveSpinFrame = (from: number, to: number) =>
+    setSpinFrames((s) => {
+      if (to < 0 || to >= s.length) return s;
+      const next = [...s];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  const clearSpinFrames = () => setSpinFrames([]);
 
   const onGalleryFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -218,6 +305,8 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     setError(null);
     const formData = new FormData(e.currentTarget);
     formData.set("gallery", JSON.stringify(gallery));
+    formData.set("spin_frames", JSON.stringify(spinFrames));
+    formData.set("pano_url", panoUrl);
     formData.set("features", JSON.stringify(featuresAsObject()));
     startTransition(async () => {
       const result = isEdit
@@ -493,6 +582,136 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* Spin frames (360°) */}
+      <div className="adm__field adm__field--full">
+        <label className="adm__label">Spin frames (360° exterior)</label>
+        <p className="adm__sub" style={{ margin: "-.2rem 0 .6rem", fontSize: ".82rem" }}>
+          Upload the OEM 360° image set — typically 36 frames. Files are
+          sorted by filename, so name them <code>01.jpg</code>,{" "}
+          <code>02.jpg</code>, … <code>36.jpg</code>. The 360° tab activates
+          once there are at least 12 frames.
+        </p>
+        <p className="adm__sub" style={{ margin: "0 0 .6rem", fontSize: ".82rem" }}>
+          {spinFrames.length} frame{spinFrames.length === 1 ? "" : "s"}
+          {spinFrames.length >= 12
+            ? " — 360° tab enabled"
+            : spinFrames.length > 0
+              ? ` — needs ≥ 12 to enable the 360° tab (${12 - spinFrames.length} more)`
+              : ""}
+        </p>
+
+        {spinFrames.length > 0 && (
+          <div className="adm__gallery-grid">
+            {spinFrames.map((url, i) => (
+              <div key={`${url}-${i}`} className="adm__gallery-cell">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" className="adm__thumb" />
+                <button
+                  type="button"
+                  className="adm__gallery-remove"
+                  aria-label="Remove frame"
+                  onClick={() => removeSpinFrame(i)}
+                >
+                  ×
+                </button>
+                <div className="adm__gallery-controls">
+                  <button
+                    type="button"
+                    className="adm__gallery-mini"
+                    aria-label="Move left"
+                    disabled={i === 0}
+                    onClick={() => moveSpinFrame(i, i - 1)}
+                  >
+                    ←
+                  </button>
+                  <span style={{ fontFamily: "var(--ff-mono)", fontSize: ".7rem" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <button
+                    type="button"
+                    className="adm__gallery-mini"
+                    aria-label="Move right"
+                    disabled={i === spinFrames.length - 1}
+                    onClick={() => moveSpinFrame(i, i + 1)}
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: ".5rem", marginTop: ".75rem", flexWrap: "wrap" }}>
+          <input
+            ref={spinFileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={onSpinFiles}
+          />
+          <button
+            type="button"
+            className="adm__btn adm__btn--ghost"
+            disabled={spinUploading}
+            onClick={() => spinFileRef.current?.click()}
+          >
+            {spinUploading ? "Uploading…" : "Upload frames"}
+          </button>
+          {spinFrames.length > 0 && (
+            <button
+              type="button"
+              className="adm__btn adm__btn--danger"
+              onClick={clearSpinFrames}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Interior pano */}
+      <div className="adm__field adm__field--full">
+        <label className="adm__label" htmlFor="pano_url">Interior pano URL</label>
+        <p className="adm__sub" style={{ margin: "-.2rem 0 .6rem", fontSize: ".82rem" }}>
+          Single equirectangular image (2:1 aspect ratio) for the interior
+          panorama tab. Leave blank to hide the tab.
+        </p>
+        <div style={{ display: "flex", gap: ".5rem", alignItems: "stretch", flexWrap: "wrap" }}>
+          <input
+            id="pano_url"
+            type="url"
+            className="adm__input"
+            style={{ flex: "1 1 320px", minWidth: 0 }}
+            value={panoUrl}
+            onChange={(e) => setPanoUrl(e.target.value)}
+            placeholder="https://images.motolinkers.com/<slug>/pano/interior.jpg"
+          />
+          <input
+            ref={panoFileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={onPanoFile}
+          />
+          <button
+            type="button"
+            className="adm__btn adm__btn--ghost"
+            disabled={panoUploading}
+            onClick={() => panoFileRef.current?.click()}
+          >
+            {panoUploading ? "Uploading…" : "Upload"}
+          </button>
+        </div>
+        {panoUrl && (
+          <div className="adm__thumb-row" style={{ marginTop: ".6rem" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={panoUrl} alt="" className="adm__thumb adm__thumb--cover" />
+          </div>
+        )}
       </div>
 
       {/* Features */}

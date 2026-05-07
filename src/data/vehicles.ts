@@ -32,6 +32,8 @@ export interface Vehicle {
   powerTrain?: VehiclePowerTrain;
   rangeKm?: number | null;
   gallery?: string[];
+  spinFrames?: string[];
+  panoUrl?: string | null;
   features?: Record<string, string[]>;
   specs?: Record<string, string>;
   isFeatured?: boolean;

@@ -37,6 +37,8 @@ type VehicleInput = {
   range_km: number | null;
   image_url: string | null;
   gallery: string[];
+  spin_frames: string[];
+  pano_url: string | null;
   features: Record<string, string[]>;
   is_featured: boolean;
   is_published: boolean;
@@ -102,6 +104,20 @@ function readForm(formData: FormData): VehicleInput | { error: string } {
     return { error: "Gallery payload was malformed." };
   }
 
+  // Spin frames are an ordered string[] of URLs, JSON-encoded.
+  let spinFrames: string[] = [];
+  const spinRaw = String(formData.get("spin_frames") ?? "[]");
+  try {
+    const parsed = JSON.parse(spinRaw);
+    if (Array.isArray(parsed)) {
+      spinFrames = parsed
+        .map((u) => (typeof u === "string" ? u.trim() : ""))
+        .filter((u) => u.length > 0);
+    }
+  } catch {
+    return { error: "Spin frames payload was malformed." };
+  }
+
   // Features are { sectionName: string[] } shape, JSON-encoded.
   const features: Record<string, string[]> = {};
   const featuresRaw = String(formData.get("features") ?? "{}");
@@ -141,6 +157,8 @@ function readForm(formData: FormData): VehicleInput | { error: string } {
     range_km: optNum("range_km"),
     image_url: optStr("image_url"),
     gallery,
+    spin_frames: spinFrames,
+    pano_url: optStr("pano_url"),
     features,
     is_featured: formData.get("is_featured") === "on",
     is_published: formData.get("is_published") === "on",
@@ -158,7 +176,11 @@ export async function createVehicle(formData: FormData) {
   if ("error" in parsed) return parsed;
 
   const supabase = await createClient();
-  const { error } = await supabase.from("vehicles").insert(parsed);
+  // Cast: generated Database types may not yet include spin_frames /
+  // pano_url. Run `supabase gen types` to refresh and remove this cast.
+  const { error } = await supabase
+    .from("vehicles")
+    .insert(parsed as unknown as never);
   if (error) return { error: error.message };
 
   bustPublic(parsed.slug);
@@ -178,7 +200,7 @@ export async function updateVehicle(id: string, formData: FormData) {
 
   const { error } = await supabase
     .from("vehicles")
-    .update(parsed)
+    .update(parsed as unknown as never)
     .eq("id", id);
   if (error) return { error: error.message };
 
