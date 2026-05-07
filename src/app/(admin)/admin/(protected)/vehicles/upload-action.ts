@@ -45,7 +45,11 @@ export async function uploadVehicleImage(
 
   const cleanSlug = slugify(slug) || slug;
   const filename = safeFilename(file.name);
-  const key = `${cleanSlug}/${Date.now()}-${filename}`;
+  // Optional sub-folder (e.g. "spin", "pano") — locked down so callers
+  // can't traverse out of the slug prefix.
+  const folder = String(formData.get("folder") ?? "").trim();
+  const folderPart = folder && /^[a-z0-9-]+$/.test(folder) ? `${folder}/` : "";
+  const key = `${cleanSlug}/${folderPart}${Date.now()}-${filename}`;
 
   await env.IMAGES_BUCKET.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type },

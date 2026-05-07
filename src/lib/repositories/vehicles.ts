@@ -24,13 +24,15 @@ type VehicleRow = {
   range_km: number | null;
   image_url: string | null;
   gallery: unknown;
+  spin_frames: unknown;
+  pano_url: string | null;
   features: unknown;
   specs: unknown;
   created_at: string;
 };
 
 const SELECT_PUBLIC =
-  "slug, name, brand, model, trim, origin, type, body, drive_type, year, price_egp, transmission, drivetrain, range_km, image_url, gallery, features, specs, created_at";
+  "slug, name, brand, model, trim, origin, type, body, drive_type, year, price_egp, transmission, drivetrain, range_km, image_url, gallery, spin_frames, pano_url, features, specs, created_at";
 
 function asGallery(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -79,6 +81,8 @@ function rowToVehicle(r: VehicleRow): Vehicle {
     powerTrain: r.type,
     rangeKm: r.range_km,
     gallery: asGallery(r.gallery),
+    spinFrames: asGallery(r.spin_frames),
+    panoUrl: r.pano_url,
     features: asFeatures(r.features),
     specs: asSpecs(r.specs),
     createdAt: r.created_at,

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Label from "@/components/ui/Label";
+import VehicleHeroMedia from "@/components/vehicles/VehicleHeroMedia";
 import { getVehicleBySlug, getAllVehicles } from "@/lib/repositories/vehicles";
 
 export const revalidate = 300;
@@ -106,17 +107,9 @@ export default async function VehiclePage(props: PageProps<"/vehicles/[slug]">) 
           }}
           className="vehicle-detail__grid"
         >
-          <div
-            style={{
-              borderRadius: 22,
-              overflow: "hidden",
-              background: "var(--ink-2)",
-              aspectRatio: "16 / 10",
-              backgroundImage: car.img ? `url('${car.img}')` : undefined,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
+          <div className="vehicle-detail__hero">
+            <VehicleHeroMedia car={car} />
+          </div>
 
           <aside
             style={{

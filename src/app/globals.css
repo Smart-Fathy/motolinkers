@@ -1373,6 +1373,151 @@ section{position:relative}
   .vbrowse__row-img{width:90px}
 }
 
+/* Vehicle hero media: tabs over spin / pano / photo */
+.vehicle-detail__hero{
+  border-radius:22px;
+  overflow:hidden;
+  background:var(--ink-2);
+}
+.hero-media{
+  position:relative;
+  aspect-ratio:16 / 10;
+  background:var(--ink-2);
+}
+.hero-media__photo{
+  position:absolute; inset:0;
+  background-size:cover;
+  background-position:center;
+}
+.hero-media__stage{ position:absolute; inset:0 }
+.hero-media__loading{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--ff-mono);
+  font-size:.72rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--stone);
+}
+.hero-media__tabs{
+  position:absolute;
+  top:.85rem; left:.85rem;
+  z-index:3;
+  display:flex; gap:.35rem;
+  padding:.25rem;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(10px);
+  border-radius:999px;
+  border:1px solid rgba(238,232,220,.12);
+}
+.hero-media__tab{
+  appearance:none;
+  border:0;
+  background:transparent;
+  color:var(--bone);
+  font-family:var(--ff-mono);
+  font-size:.7rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding:.4rem .75rem;
+  border-radius:999px;
+  cursor:pointer;
+  transition:background var(--ease-out) .15s,color var(--ease-out) .15s;
+}
+.hero-media__tab:hover{ color:var(--volt) }
+.hero-media__tab[data-active="true"]{
+  background:var(--volt);
+  color:var(--ink);
+}
+
+/* Spin viewer (custom 36-frame stack) */
+.spin{
+  position:absolute; inset:0;
+  background:var(--ink-2);
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+  outline:none;
+}
+.spin[data-dragging="true"]{ cursor:grabbing }
+.spin:focus-visible{ box-shadow:inset 0 0 0 2px var(--volt) }
+.spin__frame{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover;
+  opacity:0;
+  pointer-events:none;
+}
+.spin__frame[data-active="true"]{ opacity:1 }
+.spin__arrow{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:38px; height:38px;
+  border-radius:50%;
+  border:1px solid rgba(238,232,220,.18);
+  background:rgba(0,0,0,.45);
+  color:var(--bone);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  backdrop-filter:blur(8px);
+  transition:background var(--ease-out) .15s,color var(--ease-out) .15s;
+  z-index:2;
+}
+.spin__arrow:hover{ background:var(--volt); color:var(--ink) }
+.spin__arrow--left{ left:.85rem }
+.spin__arrow--right{ right:.85rem }
+.spin__badge{
+  position:absolute;
+  bottom:.85rem; left:50%;
+  transform:translateX(-50%);
+  padding:.35rem .7rem;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(238,232,220,.12);
+  border-radius:999px;
+  color:var(--bone);
+  font-family:var(--ff-mono);
+  font-size:.7rem;
+  letter-spacing:.18em;
+  z-index:2;
+  pointer-events:none;
+}
+.spin__hint{
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  padding:.45rem .9rem;
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(10px);
+  border-radius:999px;
+  color:var(--bone);
+  font-family:var(--ff-mono);
+  font-size:.72rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  opacity:0;
+  transition:opacity .6s var(--ease-out);
+  pointer-events:none;
+  z-index:2;
+}
+.spin__hint[data-visible="true"]{ opacity:1 }
+
+/* Pano viewer wrapper */
+.pano{ position:absolute; inset:0; background:var(--ink-2) }
+.pano__stage{ position:absolute; inset:0 }
+.pano__error{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--ff-mono);
+  font-size:.72rem;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--rust, #c97a5b);
+  padding:1rem;
+  text-align:center;
+}
+
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
