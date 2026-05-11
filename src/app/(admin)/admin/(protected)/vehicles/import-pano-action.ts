@@ -1,5 +1,6 @@
 "use server";
 
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createClient } from "@/lib/supabase/server";
 
 export async function importAutohomePano(input: {
@@ -12,8 +13,13 @@ export async function importAutohomePano(input: {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const importerUrl = process.env.PANO_IMPORTER_URL;
-  const token = process.env.PANO_IMPORTER_TOKEN;
+  const { env } = await getCloudflareContext({ async: true });
+  const cfEnv = env as unknown as {
+    PANO_IMPORTER_URL?: string;
+    PANO_IMPORTER_TOKEN?: string;
+  };
+  const importerUrl = cfEnv.PANO_IMPORTER_URL ?? process.env.PANO_IMPORTER_URL;
+  const token = cfEnv.PANO_IMPORTER_TOKEN ?? process.env.PANO_IMPORTER_TOKEN;
   if (!importerUrl || !token) {
     return { error: "Pano importer is not configured (missing PANO_IMPORTER_URL/TOKEN)." };
   }
