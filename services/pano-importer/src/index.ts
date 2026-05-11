@@ -38,16 +38,24 @@ app.post<{ Body: { url?: string; slug?: string } }>("/import-pano", async (req, 
 
 async function importOne(url: string, slug: string): Promise<string> {
   const cfg = await parseAutohome(url);
-  const requests: TileRequest[] = [];
-  for (const face of ["f", "b", "l", "r", "u", "d"] as const) {
-    for (let y = 0; y < cfg.gridSize; y++) {
-      for (let x = 0; x < cfg.gridSize; x++) {
-        requests.push({ url: cfg.tileUrl(face, x, y), face, x, y });
+  const FACES = ["f", "b", "l", "r", "u", "d"] as const;
+
+  const leveled = await Promise.all(
+    cfg.levels.map(async (lvl) => {
+      const requests: TileRequest[] = [];
+      for (const face of FACES) {
+        for (let y = 0; y < lvl.gridSize; y++) {
+          for (let x = 0; x < lvl.gridSize; x++) {
+            requests.push({ url: lvl.tileUrl(face, x, y), face, x, y });
+          }
+        }
       }
-    }
-  }
-  const tiles = await downloadTiles(requests);
-  const faces = await stitchFaces(tiles, cfg.gridSize, cfg.tilePx);
+      const tiles = await downloadTiles(requests);
+      return { level: lvl, tiles };
+    }),
+  );
+
+  const faces = await stitchFaces(leveled);
   const jpeg = await cubeToEquirect(faces);
   const key = `${slug}/pano/autohome-${Date.now()}.jpg`;
   return uploadToR2({ key, body: jpeg, contentType: "image/jpeg" });

@@ -1,15 +1,20 @@
 import { XMLParser } from "fast-xml-parser";
 import type { CubeFace } from "./stitch-faces.js";
 
-export interface AutohomeConfig {
-  /** Highest cubemap level we'll download. */
+export interface LevelConfig {
+  /** 1-indexed level number. Matches the %l placeholder. */
   level: number;
-  /** Tiles per face on the chosen level (e.g. 4 means a 4x4 grid). */
+  /** Tiles per face row/col at this level. */
   gridSize: number;
-  /** Pixel size of a single tile (typically 512). */
+  /** Pixel size of a single tile (usually 512). */
   tilePx: number;
-  /** Build the absolute URL for a given face/level/tile coord. */
+  /** Build the absolute URL for a given face/tile coord at this level. */
   tileUrl(face: CubeFace, x: number, y: number): string;
+}
+
+export interface AutohomeConfig {
+  /** All levels discovered from the XML, ordered low → high resolution. */
+  levels: LevelConfig[];
 }
 
 /**
@@ -203,12 +208,9 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
   if (!urlTemplate) throw new Error("Pano config is malformed: no cube tile URL template.");
   if (levels.length === 0) throw new Error("Pano config is malformed: no resolution levels.");
 
-  // Pick the highest-resolution level.
-  levels.sort((a, b) => b.tiledImageWidth - a.tiledImageWidth);
-  const top = levels[0]!;
-  const level = levels.length;
-  const gridSize = Math.max(1, Math.round(top.tiledImageWidth / top.tilePx));
-  const finalTilePx = top.tilePx;
+  // Sort ascending: levels[0] is the smallest preview, levels[N-1] is the
+  // highest resolution. krpano numbers levels starting at 1.
+  levels.sort((a, b) => a.tiledImageWidth - b.tiledImageWidth);
 
   // Resolve %$varname% style variable references against the parsed
   // XML (krpano stores tileserver / scenepath / etc. as top-level
@@ -217,23 +219,29 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
   const resolvedTemplate = resolveVars(urlTemplate, vars);
   const absTemplate = absUrl(resolvedTemplate, xmlUrl);
 
-  return {
-    level,
-    gridSize,
-    tilePx: finalTilePx,
-    tileUrl(face, x, y) {
-      // krpano placeholders we support:
-      //   %l / %0l  → level number
-      //   %s        → cube side (f/b/l/r/u/d)
-      //   %h / %0h or %x / %0x  → column index
-      //   %v / %0v or %y / %0y  → row index
-      return absTemplate
-        .replace(/%0?l/g, String(level))
-        .replace(/%s/g, face)
-        .replace(/%0?[hx]/g, String(x))
-        .replace(/%0?[vy]/g, String(y));
-    },
-  };
+  const out: LevelConfig[] = levels.map((lvl, idx) => {
+    const levelNumber = idx + 1;
+    const gridSize = Math.max(1, Math.ceil(lvl.tiledImageWidth / lvl.tilePx));
+    return {
+      level: levelNumber,
+      gridSize,
+      tilePx: lvl.tilePx,
+      tileUrl(face, x, y) {
+        // krpano placeholders:
+        //   %l / %0l  → level number
+        //   %s        → cube side (f/b/l/r/u/d)
+        //   %h / %0h or %x / %0x  → column index
+        //   %v / %0v or %y / %0y  → row index
+        return absTemplate
+          .replace(/%0?l/g, String(levelNumber))
+          .replace(/%s/g, face)
+          .replace(/%0?[hx]/g, String(x))
+          .replace(/%0?[vy]/g, String(y));
+      },
+    };
+  });
+
+  return { levels: out };
 }
 
 /**
