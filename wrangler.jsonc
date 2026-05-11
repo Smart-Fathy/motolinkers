@@ -32,7 +32,8 @@
   },
   "vars": {
     "NEXT_PUBLIC_SITE_URL": "https://motolinkers.com",
-    "NEXT_PUBLIC_R2_PUBLIC_URL": "https://images.motolinkers.com"
+    "NEXT_PUBLIC_R2_PUBLIC_URL": "https://images.motolinkers.com",
+    "PANO_IMPORTER_URL": "https://pano-importer-production.up.railway.app"
   },
   "observability": {
     "enabled": false,
