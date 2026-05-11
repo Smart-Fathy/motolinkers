@@ -209,20 +209,76 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
   const level = levels.length;
   const gridSize = Math.max(1, Math.round(top.tiledImageWidth / top.tilePx));
   const finalTilePx = top.tilePx;
-  const absTemplate = absUrl(urlTemplate, xmlUrl);
+
+  // Resolve %$varname% style variable references against the parsed
+  // XML (krpano stores tileserver / scenepath / etc. as top-level
+  // attributes or <data> entries that the URL template references).
+  const vars = collectVariables(parsed);
+  const resolvedTemplate = resolveVars(urlTemplate, vars);
+  const absTemplate = absUrl(resolvedTemplate, xmlUrl);
 
   return {
     level,
     gridSize,
     tilePx: finalTilePx,
     tileUrl(face, x, y) {
-      // krpano placeholders: %l (level), %s (side: l/f/r/b/u/d), %x (col), %y (row).
-      // Some configs use %0l/%0x/%0y for zero-padded numbers; handle both.
+      // krpano placeholders we support:
+      //   %l / %0l  → level number
+      //   %s        → cube side (f/b/l/r/u/d)
+      //   %h / %0h or %x / %0x  → column index
+      //   %v / %0v or %y / %0y  → row index
       return absTemplate
         .replace(/%0?l/g, String(level))
         .replace(/%s/g, face)
-        .replace(/%0?x/g, String(x))
-        .replace(/%0?y/g, String(y));
+        .replace(/%0?[hx]/g, String(x))
+        .replace(/%0?[vy]/g, String(y));
     },
   };
+}
+
+/**
+ * Walk the parsed XML tree, collecting any string-valued attribute or
+ * element that could be referenced from a krpano URL template as
+ * `%$name%`. Top-level krpano attributes (tileserver, scenepath) and
+ * <data name="x" content="y"/> entries are the most common forms.
+ */
+function collectVariables(node: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  walk(node, out);
+  return out;
+}
+
+function walk(node: unknown, out: Map<string, string>): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) walk(item, out);
+    return;
+  }
+  const obj = node as Record<string, unknown>;
+  for (const [k, v] of Object.entries(obj)) {
+    if (k.startsWith("@_") && typeof v === "string") {
+      out.set(k.slice(2).toLowerCase(), v);
+    }
+  }
+  const name = (obj["@_name"] as string | undefined)?.toLowerCase();
+  const content = (obj["@_content"] as string | undefined) ?? (obj["@_value"] as string | undefined);
+  if (name && typeof content === "string") {
+    out.set(name, content);
+  }
+  for (const [k, v] of Object.entries(obj)) {
+    if (!k.startsWith("@_")) walk(v, out);
+  }
+}
+
+function resolveVars(template: string, vars: Map<string, string>): string {
+  let result = template;
+  for (let i = 0; i < 5; i++) {
+    const replaced = result.replace(/%\$([a-zA-Z0-9_]+)%/g, (whole, name: string) => {
+      const v = vars.get(name.toLowerCase());
+      return v ?? whole;
+    });
+    if (replaced === result) break;
+    result = replaced;
+  }
+  return result;
 }
