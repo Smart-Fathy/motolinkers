@@ -10,27 +10,44 @@ export interface FaceImage {
   rgb: Buffer;
 }
 
+/**
+ * Compose tiles into one square image per cube face. The grid we
+ * requested may be larger than what autohome actually serves, so we
+ * shrink each face to the smallest power-of-tile that covers every
+ * tile we got back. Missing tiles inside that bound are left black.
+ */
 export async function stitchFaces(
   tiles: TileResult[],
-  gridSize: number,
+  _gridSize: number,
   tilePx: number,
 ): Promise<FaceImage[]> {
-  if (gridSize < 1) throw new Error(`Bad grid size: ${gridSize}`);
-  const faceSize = gridSize * tilePx;
   const byFace = new Map<string, TileResult[]>();
   for (const t of tiles) {
     const arr = byFace.get(t.face) ?? [];
     arr.push(t);
     byFace.set(t.face, arr);
   }
+
   const out: FaceImage[] = [];
   for (const face of CUBE_FACES) {
     const list = byFace.get(face);
-    if (!list || list.length !== gridSize * gridSize) {
+    if (!list || list.length === 0) {
+      throw new Error(`Cube face '${face}' has no tiles. Autohome may not serve this face.`);
+    }
+    let maxX = 0;
+    let maxY = 0;
+    for (const t of list) {
+      if (t.x > maxX) maxX = t.x;
+      if (t.y > maxY) maxY = t.y;
+    }
+    const cols = maxX + 1;
+    const rows = maxY + 1;
+    if (cols !== rows) {
       throw new Error(
-        `Face '${face}' has ${list?.length ?? 0} tiles, expected ${gridSize * gridSize}.`,
+        `Cube face '${face}' is non-square: ${cols}x${rows}. Cubemap projection requires square faces.`,
       );
     }
+    const faceSize = cols * tilePx;
     const composites = list.map((t) => ({
       input: t.buffer,
       left: t.x * tilePx,
