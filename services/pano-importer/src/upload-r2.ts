@@ -17,7 +17,15 @@ function getClient(): S3Client {
 
 function required(name: string): string {
   const v = process.env[name];
-  if (!v) throw new Error(`Missing env: ${name}`);
+  if (!v) {
+    const visible = Object.keys(process.env)
+      .filter((k) => /^(R2_|IMPORTER_|PORT$|RAILWAY_ENVIRONMENT)/.test(k))
+      .sort()
+      .join(", ");
+    throw new Error(
+      `Missing env: ${name}. Visible to process: [${visible || "none"}].`,
+    );
+  }
   return v;
 }
 
