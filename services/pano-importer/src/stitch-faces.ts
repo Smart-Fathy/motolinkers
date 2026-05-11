@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import type { LevelConfig } from "./parse-autohome.js";
 import type { TileResult } from "./download-tiles.js";
 
 export type CubeFace = "f" | "b" | "l" | "r" | "u" | "d";
@@ -10,62 +11,85 @@ export interface FaceImage {
   rgb: Buffer;
 }
 
+interface LeveledTiles {
+  level: LevelConfig;
+  tiles: TileResult[];
+}
+
 /**
- * Compose tiles into one square image per cube face. The grid we
- * requested may be larger than what autohome actually serves, so we
- * shrink each face to the smallest power-of-tile that covers every
- * tile we got back. Missing tiles inside that bound are left black.
+ * Build one square face image per cube side by layering each tile
+ * resolution level. The lowest level (smallest, usually fully covered)
+ * is upscaled to the target face size and used as a base; higher
+ * levels are composited on top, filling in detail where their tiles
+ * exist. Wherever the highest level has gaps the lower-resolution base
+ * shows through instead of going black.
  */
-export async function stitchFaces(
-  tiles: TileResult[],
-  _gridSize: number,
-  tilePx: number,
-): Promise<FaceImage[]> {
-  const byFace = new Map<string, TileResult[]>();
-  for (const t of tiles) {
-    const arr = byFace.get(t.face) ?? [];
-    arr.push(t);
-    byFace.set(t.face, arr);
+export async function stitchFaces(leveledTiles: LeveledTiles[]): Promise<FaceImage[]> {
+  if (leveledTiles.length === 0) throw new Error("No levels provided to stitcher.");
+  // Sort ascending — base first, detail last.
+  const sorted = [...leveledTiles].sort((a, b) => a.level.level - b.level.level);
+  const top = sorted[sorted.length - 1]!.level;
+  const targetSize = top.gridSize * top.tilePx;
+
+  const tilesByLevelFace = new Map<string, TileResult[]>();
+  for (const lt of sorted) {
+    for (const t of lt.tiles) {
+      const key = `${lt.level.level}/${t.face}`;
+      const arr = tilesByLevelFace.get(key) ?? [];
+      arr.push(t);
+      tilesByLevelFace.set(key, arr);
+    }
   }
 
   const out: FaceImage[] = [];
   for (const face of CUBE_FACES) {
-    const list = byFace.get(face);
-    if (!list || list.length === 0) {
-      throw new Error(`Cube face '${face}' has no tiles. Autohome may not serve this face.`);
+    let canvas: sharp.Sharp | null = null;
+
+    for (const lt of sorted) {
+      const tiles = tilesByLevelFace.get(`${lt.level.level}/${face}`) ?? [];
+      if (tiles.length === 0) continue;
+
+      const lvlGridSize = lt.level.gridSize;
+      const lvlTilePx = lt.level.tilePx;
+      const lvlFaceSize = lvlGridSize * lvlTilePx;
+
+      const lvlAssembled = await sharp({
+        create: {
+          width: lvlFaceSize,
+          height: lvlFaceSize,
+          channels: 4,
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        },
+      })
+        .composite(
+          tiles.map((t) => ({
+            input: t.buffer,
+            left: t.x * lvlTilePx,
+            top: t.y * lvlTilePx,
+          })),
+        )
+        .png()
+        .toBuffer();
+
+      const scaled = await sharp(lvlAssembled)
+        .resize(targetSize, targetSize, { fit: "fill", kernel: "lanczos3" })
+        .png()
+        .toBuffer();
+
+      if (canvas === null) {
+        canvas = sharp(scaled);
+      } else {
+        const base: Buffer = await canvas.png().toBuffer();
+        canvas = sharp(base).composite([{ input: scaled }]);
+      }
     }
-    let maxX = 0;
-    let maxY = 0;
-    for (const t of list) {
-      if (t.x > maxX) maxX = t.x;
-      if (t.y > maxY) maxY = t.y;
+
+    if (canvas === null) {
+      throw new Error(`Cube face '${face}' has no tiles at any level.`);
     }
-    const cols = maxX + 1;
-    const rows = maxY + 1;
-    if (cols !== rows) {
-      throw new Error(
-        `Cube face '${face}' is non-square: ${cols}x${rows}. Cubemap projection requires square faces.`,
-      );
-    }
-    const faceSize = cols * tilePx;
-    const composites = list.map((t) => ({
-      input: t.buffer,
-      left: t.x * tilePx,
-      top: t.y * tilePx,
-    }));
-    const stitched = await sharp({
-      create: {
-        width: faceSize,
-        height: faceSize,
-        channels: 3,
-        background: { r: 0, g: 0, b: 0 },
-      },
-    })
-      .composite(composites)
-      .removeAlpha()
-      .raw()
-      .toBuffer();
-    out.push({ face, size: faceSize, rgb: stitched });
+
+    const rgb = await canvas.removeAlpha().raw().toBuffer();
+    out.push({ face, size: targetSize, rgb });
   }
   return out;
 }
