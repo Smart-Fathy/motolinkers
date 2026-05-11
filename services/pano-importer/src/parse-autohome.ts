@@ -100,6 +100,43 @@ interface KrpanoLevel {
   tilePx: number;
 }
 
+/**
+ * Find an <image> node anywhere in the parsed XML tree. krpano configs
+ * place it at the top level for single-pano files but inside <scene>
+ * blocks for multi-scene tours; autohome appears to use the latter for
+ * interior+exterior bundles. Depth-first walk, return the first match
+ * that has a <cube> child or url-bearing attribute.
+ */
+function findImageNode(node: unknown): Record<string, unknown> | undefined {
+  if (!node || typeof node !== "object") return undefined;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = findImageNode(item);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  const obj = node as Record<string, unknown>;
+  const img = obj.image;
+  if (img) {
+    const imgs = Array.isArray(img) ? img : [img];
+    for (const candidate of imgs) {
+      if (candidate && typeof candidate === "object") {
+        const c = candidate as Record<string, unknown>;
+        if (c.cube || c.level || c.sphere || c.flat) {
+          return c;
+        }
+      }
+    }
+  }
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith("@_")) continue;
+    const found = findImageNode(obj[key]);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
   let parsed: unknown;
   try {
@@ -114,8 +151,13 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
   }
 
   const root = (parsed as Record<string, unknown>).krpano ?? parsed;
-  const image = (root as Record<string, unknown>).image as Record<string, unknown> | undefined;
-  if (!image) throw new Error("Pano config is malformed: no <image> element.");
+  const image = findImageNode(root);
+  if (!image) {
+    const snippet = xmlText.slice(0, 600).replace(/\s+/g, " ");
+    throw new Error(
+      `Pano config is malformed: no <image>+<cube> found. XML head: ${snippet}`,
+    );
+  }
 
   // Two krpano shapes are common:
   //   A) <image><cube url="…/l%l/%s_%y_%x.jpg" tilesize="512" multires="…"/></image>
