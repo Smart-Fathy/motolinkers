@@ -17,15 +17,17 @@ export interface TileResult extends TileRequest {
 
 export async function downloadTiles(tiles: TileRequest[]): Promise<TileResult[]> {
   const limit = pLimit(TILE_CONCURRENCY);
-  return Promise.all(tiles.map((t) => limit(() => fetchOne(t))));
+  const results = await Promise.all(tiles.map((t) => limit(() => fetchOne(t))));
+  return results.filter((r): r is TileResult => r !== null);
 }
 
-async function fetchOne(t: TileRequest): Promise<TileResult> {
+async function fetchOne(t: TileRequest): Promise<TileResult | null> {
   let lastErr: Error | null = null;
   for (let attempt = 0; attempt <= TILE_RETRIES; attempt++) {
     try {
-      const buffer = await fetchWithTimeout(t.url);
-      return { ...t, buffer };
+      const result = await fetchWithTimeout(t.url);
+      if (result === null) return null; // 4xx — tile doesn't exist, drop it
+      return { ...t, buffer: result };
     } catch (e) {
       lastErr = e instanceof Error ? e : new Error(String(e));
       if (attempt < TILE_RETRIES) {
@@ -33,10 +35,13 @@ async function fetchOne(t: TileRequest): Promise<TileResult> {
       }
     }
   }
-  throw new Error(`Tile fetch failed: ${t.url} (${lastErr?.message ?? "unknown"}). Autohome may be rate-limiting.`);
+  throw new Error(
+    `Tile fetch failed: ${t.url} (${lastErr?.message ?? "unknown"}). Autohome may be rate-limiting.`,
+  );
 }
 
-async function fetchWithTimeout(url: string): Promise<Buffer> {
+/** Returns the JPEG bytes, or null if the server returned a 4xx (tile not part of the pyramid). */
+async function fetchWithTimeout(url: string): Promise<Buffer | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TILE_TIMEOUT_MS);
   try {
@@ -48,6 +53,7 @@ async function fetchWithTimeout(url: string): Promise<Buffer> {
         Referer: "https://pano.autohome.com.cn/",
       },
     });
+    if (res.status >= 400 && res.status < 500) return null;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ab = await res.arrayBuffer();
     return Buffer.from(ab);
