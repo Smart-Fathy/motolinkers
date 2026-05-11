@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import type { Database } from "@/lib/supabase/database.types";
 import { slugify } from "@/lib/utils";
 import { createVehicle, updateVehicle } from "./actions";
+import { importAutohomePano } from "./import-pano-action";
 import { uploadVehicleImage } from "./upload-action";
 import { syncVehicleGallery } from "./sync-action";
 
@@ -92,6 +93,8 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
   const [galleryUrlDraft, setGalleryUrlDraft] = useState("");
   const [spinUploading, setSpinUploading] = useState(false);
   const [panoUploading, setPanoUploading] = useState(false);
+  const [panoImporting, setPanoImporting] = useState(false);
+  const [panoImportError, setPanoImportError] = useState<string | null>(null);
   const coverFileRef = useRef<HTMLInputElement | null>(null);
   const galleryFileRef = useRef<HTMLInputElement | null>(null);
   const spinFileRef = useRef<HTMLInputElement | null>(null);
@@ -133,6 +136,32 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
     e.target.value = "";
     if (!file) return;
     void uploadFor(file, setCoverUploading, (url) => setImageUrl(url));
+  };
+
+  const onImportAutohomePano = () => {
+    setPanoImportError(null);
+    if (!slug) {
+      setPanoImportError("Enter a slug first.");
+      return;
+    }
+    const url = panoUrl.trim();
+    if (!/^https?:\/\/pano\.autohome\.com\.cn\//i.test(url)) {
+      setPanoImportError("Paste an autohome pano URL into this field, then click Import.");
+      return;
+    }
+    setPanoImporting(true);
+    (async () => {
+      try {
+        const result = await importAutohomePano({ url, slug });
+        if ("error" in result) {
+          setPanoImportError(result.error);
+          return;
+        }
+        setPanoUrl(result.url);
+      } finally {
+        setPanoImporting(false);
+      }
+    })();
   };
 
   const onPanoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -705,7 +734,28 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
           >
             {panoUploading ? "Uploading…" : "Upload"}
           </button>
+          <button
+            type="button"
+            className="adm__btn adm__btn--ghost"
+            disabled={panoImporting}
+            onClick={onImportAutohomePano}
+            title="Paste an autohome.com.cn pano URL above, then click to convert it to an equirectangular image."
+          >
+            {panoImporting ? "Importing…" : "Import from autohome"}
+          </button>
         </div>
+        {panoImportError && (
+          <p
+            style={{
+              marginTop: ".5rem",
+              color: "var(--volt)",
+              fontSize: ".82rem",
+              fontFamily: "var(--ff-mono)",
+            }}
+          >
+            {panoImportError}
+          </p>
+        )}
         {panoUrl && (
           <div className="adm__thumb-row" style={{ marginTop: ".6rem" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
