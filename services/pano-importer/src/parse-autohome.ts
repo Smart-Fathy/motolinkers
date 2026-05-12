@@ -112,6 +112,10 @@ function absUrl(maybeRel: string, base: string): string {
 interface KrpanoLevel {
   tiledImageWidth: number;
   tilePx: number;
+  /** Per-level URL template — autohome bakes the level number into the
+   *  path (l1/, l2/, l3/) rather than using a %l placeholder, so each
+   *  level has its own template. */
+  urlTemplate: string;
 }
 
 /**
@@ -174,27 +178,32 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
   }
 
   // Two krpano shapes are common:
-  //   A) <image><cube url="…/l%l/%s_%y_%x.jpg" tilesize="512" multires="…"/></image>
+  //   A) <image multires="..."><cube url="…/l%l/%s_%y_%x.jpg" ... /></image>
   //   B) <image type="CUBE"><level tiledimagewidth="…"><cube url="…"/></level>...</image>
-  let urlTemplate: string | undefined;
   let tilePx = 512;
+  const tsAttr = (image["@_tilesize"] as string | undefined) ?? undefined;
+  if (tsAttr) tilePx = parseInt(tsAttr, 10) || 512;
+
   let levels: KrpanoLevel[] = [];
 
   if (image.cube) {
     const cube = image.cube as Record<string, unknown>;
-    urlTemplate = (cube["@_url"] as string) ?? (cube.url as string) ?? undefined;
+    const urlTemplate = (cube["@_url"] as string) ?? (cube.url as string) ?? "";
     const ts = (image["@_tilesize"] as string) ?? (cube["@_tilesize"] as string);
-    if (ts) tilePx = parseInt(ts, 10) || 512;
+    if (ts) tilePx = parseInt(ts, 10) || tilePx;
     const multires = (image["@_multires"] as string) ?? (cube["@_multires"] as string);
-    if (multires) {
-      // multires="512,1024,2048,4096" — comma-sep tile and level widths
+    if (multires && /,/.test(multires)) {
       const parts = multires
         .split(",")
         .map((s) => parseInt(s.trim(), 10))
         .filter((n) => !Number.isNaN(n));
       if (parts.length >= 2) {
         tilePx = parts[0]!;
-        levels = parts.slice(1).map((tiledImageWidth) => ({ tiledImageWidth, tilePx }));
+        levels = parts.slice(1).map((tiledImageWidth) => ({
+          tiledImageWidth,
+          tilePx,
+          urlTemplate,
+        }));
       }
     }
   }
@@ -207,30 +216,33 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
       const w = parseInt((obj["@_tiledimagewidth"] as string) ?? "", 10);
       const cube = obj.cube as Record<string, unknown> | undefined;
       const ts = parseInt((obj["@_tilesize"] as string) ?? (cube?.["@_tilesize"] as string) ?? "", 10);
-      if (!urlTemplate && cube) urlTemplate = (cube["@_url"] as string) ?? undefined;
-      if (!Number.isNaN(w)) {
-        levels.push({ tiledImageWidth: w, tilePx: !Number.isNaN(ts) ? ts : tilePx });
+      const urlTemplate = cube ? ((cube["@_url"] as string) ?? "") : "";
+      if (!Number.isNaN(w) && urlTemplate) {
+        levels.push({
+          tiledImageWidth: w,
+          tilePx: !Number.isNaN(ts) ? ts : tilePx,
+          urlTemplate,
+        });
       }
     }
   }
 
-  if (!urlTemplate) throw new Error("Pano config is malformed: no cube tile URL template.");
   if (levels.length === 0) throw new Error("Pano config is malformed: no resolution levels.");
 
   // Sort ascending: levels[0] is the smallest preview, levels[N-1] is the
   // highest resolution. krpano numbers levels starting at 1.
   levels.sort((a, b) => a.tiledImageWidth - b.tiledImageWidth);
 
-  // Resolve %$varname% style variable references against the parsed
-  // XML (krpano stores tileserver / scenepath / etc. as top-level
-  // attributes or <data> entries that the URL template references).
+  // Resolve %$varname% style variable references against the parsed XML
+  // (krpano stores tileserver / scenepath / etc. as top-level attributes
+  // or <data> entries that URL templates reference).
   const vars = collectVariables(parsed);
-  const resolvedTemplate = resolveVars(urlTemplate, vars);
-  const absTemplate = absUrl(resolvedTemplate, xmlUrl);
 
   const out: LevelConfig[] = levels.map((lvl, idx) => {
     const levelNumber = idx + 1;
     const gridSize = Math.max(1, Math.ceil(lvl.tiledImageWidth / lvl.tilePx));
+    const resolved = resolveVars(lvl.urlTemplate, vars);
+    const absTemplate = absUrl(resolved, xmlUrl);
     return {
       level: levelNumber,
       gridSize,
