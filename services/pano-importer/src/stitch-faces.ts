@@ -88,8 +88,19 @@ export async function stitchFaces(leveledTiles: LeveledTiles[]): Promise<FaceIma
       throw new Error(`Cube face '${face}' has no tiles at any level.`);
     }
 
-    const rgb = await canvas.removeAlpha().raw().toBuffer();
-    out.push({ face, size: targetSize, rgb });
+    // Autohome's face images have a centered photographic region
+    // surrounded by black padding (each face only covers a sub-square
+    // of its allotted area). Crop to the non-black bounds and stretch
+    // back to face size so the photo fills the cube face. This avoids
+    // the black bands between faces in the equirectangular output.
+    const flat: Buffer = await canvas.flatten({ background: "#000" }).png().toBuffer();
+    const trimmed = await sharp(flat)
+      .trim({ threshold: 12 })
+      .resize(targetSize, targetSize, { fit: "fill", kernel: "lanczos3" })
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+    out.push({ face, size: targetSize, rgb: trimmed });
   }
   return out;
 }
