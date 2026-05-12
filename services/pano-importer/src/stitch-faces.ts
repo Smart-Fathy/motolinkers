@@ -18,18 +18,25 @@ interface LeveledTiles {
 
 /**
  * Build one square face image per cube side by layering each tile
- * resolution level. The lowest level (smallest, usually fully covered)
- * is upscaled to the target face size and used as a base; higher
- * levels are composited on top, filling in detail where their tiles
- * exist. Wherever the highest level has gaps the lower-resolution base
- * shows through instead of going black.
+ * resolution level. The lowest level is upscaled to the target face
+ * size as a base; higher levels are composited on top, filling in
+ * detail where their tiles exist. Wherever the highest level has
+ * gaps the lower-resolution base shows through instead of going
+ * black.
+ *
+ * Each level's face dimensions come from the XML's tiledimagewidth
+ * attribute, not gridSize × tilePx. Autohome publishes faces sized
+ * to non-multiples of the tile size (e.g. 3840 with 512px tiles),
+ * where the last column/row of tiles is smaller than a full tile.
+ * Using gridSize × tilePx for the canvas leaves a black border
+ * around the photo content that shows up as a black band between
+ * cube faces in the equirectangular projection.
  */
 export async function stitchFaces(leveledTiles: LeveledTiles[]): Promise<FaceImage[]> {
   if (leveledTiles.length === 0) throw new Error("No levels provided to stitcher.");
-  // Sort ascending — base first, detail last.
   const sorted = [...leveledTiles].sort((a, b) => a.level.level - b.level.level);
   const top = sorted[sorted.length - 1]!.level;
-  const targetSize = top.gridSize * top.tilePx;
+  const targetSize = top.faceSize;
 
   const tilesByLevelFace = new Map<string, TileResult[]>();
   for (const lt of sorted) {
@@ -49,9 +56,8 @@ export async function stitchFaces(leveledTiles: LeveledTiles[]): Promise<FaceIma
       const tiles = tilesByLevelFace.get(`${lt.level.level}/${face}`) ?? [];
       if (tiles.length === 0) continue;
 
-      const lvlGridSize = lt.level.gridSize;
+      const lvlFaceSize = lt.level.faceSize;
       const lvlTilePx = lt.level.tilePx;
-      const lvlFaceSize = lvlGridSize * lvlTilePx;
 
       const lvlAssembled = await sharp({
         create: {
@@ -71,10 +77,13 @@ export async function stitchFaces(leveledTiles: LeveledTiles[]): Promise<FaceIma
         .png()
         .toBuffer();
 
-      const scaled = await sharp(lvlAssembled)
-        .resize(targetSize, targetSize, { fit: "fill", kernel: "lanczos3" })
-        .png()
-        .toBuffer();
+      const scaled =
+        lvlFaceSize === targetSize
+          ? lvlAssembled
+          : await sharp(lvlAssembled)
+              .resize(targetSize, targetSize, { fit: "fill", kernel: "lanczos3" })
+              .png()
+              .toBuffer();
 
       if (canvas === null) {
         canvas = sharp(scaled);
@@ -88,19 +97,8 @@ export async function stitchFaces(leveledTiles: LeveledTiles[]): Promise<FaceIma
       throw new Error(`Cube face '${face}' has no tiles at any level.`);
     }
 
-    // Autohome's face images have a centered photographic region
-    // surrounded by black padding (each face only covers a sub-square
-    // of its allotted area). Crop to the non-black bounds and stretch
-    // back to face size so the photo fills the cube face. This avoids
-    // the black bands between faces in the equirectangular output.
-    const flat: Buffer = await canvas.flatten({ background: "#000" }).png().toBuffer();
-    const trimmed = await sharp(flat)
-      .trim({ threshold: 12 })
-      .resize(targetSize, targetSize, { fit: "fill", kernel: "lanczos3" })
-      .removeAlpha()
-      .raw()
-      .toBuffer();
-    out.push({ face, size: targetSize, rgb: trimmed });
+    const rgb = await canvas.flatten({ background: "#000" }).removeAlpha().raw().toBuffer();
+    out.push({ face, size: targetSize, rgb });
   }
   return out;
 }
