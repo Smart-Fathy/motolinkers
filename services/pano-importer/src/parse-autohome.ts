@@ -254,11 +254,18 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
         //   %s        → cube side (f/b/l/r/u/d)
         //   %h / %0h or %x / %0x  → column index
         //   %v / %0v or %y / %0y  → row index
+        //
+        // Autohome's tiles are 1-indexed in URL coords even though
+        // their XML uses lowercase %h/%v (the krpano spec defines
+        // these as 0-based). Caller passes 0-based (x, y); we add 1
+        // before substituting to match autohome's actual file names,
+        // while leaving canvas placement at (x, y) × tilePx so the
+        // first tile lands at (0, 0).
         return absTemplate
           .replace(/%0?l/g, String(levelNumber))
           .replace(/%s/g, face)
-          .replace(/%0?[hx]/g, String(x))
-          .replace(/%0?[vy]/g, String(y));
+          .replace(/%0?[hx]/g, String(x + 1))
+          .replace(/%0?[vy]/g, String(y + 1));
       },
     };
   });
