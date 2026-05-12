@@ -8,6 +8,15 @@ export interface LevelConfig {
   gridSize: number;
   /** Pixel size of a single tile (usually 512). */
   tilePx: number;
+  /**
+   * Actual face dimension in pixels. May be smaller than
+   * `gridSize * tilePx` — autohome uses non-multiple-of-tilesize
+   * widths (e.g. 3840 with 512px tiles ⇒ 8 tiles where the last
+   * column/row is only 256px wide). The face canvas must be sized
+   * to this value, not `gridSize * tilePx`, or the unused area
+   * becomes a black border around the photo content.
+   */
+  faceSize: number;
   /** Build the absolute URL for a given face/tile coord at this level. */
   tileUrl(face: CubeFace, x: number, y: number): string;
 }
@@ -226,6 +235,7 @@ function parseKrpanoXml(xmlText: string, xmlUrl: string): AutohomeConfig {
       level: levelNumber,
       gridSize,
       tilePx: lvl.tilePx,
+      faceSize: lvl.tiledImageWidth,
       tileUrl(face, x, y) {
         // krpano placeholders:
         //   %l / %0l  → level number
