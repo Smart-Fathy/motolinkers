@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import PQueue from "p-queue";
+import sharp from "sharp";
 import { cubeToEquirect } from "./cube-to-equirect.js";
 import { downloadTiles, type TileRequest } from "./download-tiles.js";
 import { parseAutohome } from "./parse-autohome.js";
@@ -27,8 +28,8 @@ app.post<{ Body: { url?: string; slug?: string } }>("/import-pano", async (req, 
   }
 
   try {
-    const panoUrl = await queue.add(() => importOne(url, slug), { throwOnTimeout: true });
-    return reply.send({ panoUrl });
+    const result = await queue.add(() => importOne(url, slug), { throwOnTimeout: true });
+    return reply.send(result);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     req.log.error({ err: e }, "import failed");
@@ -36,7 +37,10 @@ app.post<{ Body: { url?: string; slug?: string } }>("/import-pano", async (req, 
   }
 });
 
-async function importOne(url: string, slug: string): Promise<string> {
+async function importOne(url: string, slug: string): Promise<{
+  panoUrl: string;
+  debugFaces: Record<string, string>;
+}> {
   const cfg = await parseAutohome(url);
   const FACES = ["f", "b", "l", "r", "u", "d"] as const;
 
@@ -56,9 +60,32 @@ async function importOne(url: string, slug: string): Promise<string> {
   );
 
   const faces = await stitchFaces(leveled);
+  const ts = Date.now();
+
+  // Upload each cube face as a debug JPEG so we can see the real
+  // shape of autohome's data (and verify the stitcher is producing
+  // sensible output) before the cube→equirect projection.
+  const debugFaces: Record<string, string> = {};
+  for (const fi of faces) {
+    const jpeg = await sharp(fi.rgb, {
+      raw: { width: fi.size, height: fi.size, channels: 3 },
+    })
+      .jpeg({ quality: 80 })
+      .toBuffer();
+    debugFaces[fi.face] = await uploadToR2({
+      key: `${slug}/pano/debug/${ts}-face-${fi.face}.jpg`,
+      body: jpeg,
+      contentType: "image/jpeg",
+    });
+  }
+
   const jpeg = await cubeToEquirect(faces);
-  const key = `${slug}/pano/autohome-${Date.now()}.jpg`;
-  return uploadToR2({ key, body: jpeg, contentType: "image/jpeg" });
+  const panoUrl = await uploadToR2({
+    key: `${slug}/pano/autohome-${ts}.jpg`,
+    body: jpeg,
+    contentType: "image/jpeg",
+  });
+  return { panoUrl, debugFaces };
 }
 
 function requireEnv(name: string): string {
