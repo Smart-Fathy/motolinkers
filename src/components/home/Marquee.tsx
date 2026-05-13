@@ -15,14 +15,14 @@ export interface MarqueeData {
 
 export const MARQUEE_DEFAULT_DATA: MarqueeData = {
   items: [
-    { text: "Toyota" },
-    { text: "Nissan" },
-    { text: "Mazda" },
-    { text: "iCar" },
-    { text: "Deepal" },
-    { text: "Avatr" },
-    { text: "BYD" },
-    { text: "BMW" },
+    { text: "Toyota", logo_url: "/logos/toyota.png" },
+    { text: "Nissan", logo_url: "/logos/nissan.png" },
+    { text: "Mazda", logo_url: "/logos/mazda.png" },
+    { text: "iCar", logo_url: "/logos/icar.png" },
+    { text: "Deepal", logo_url: "/logos/deepal.png" },
+    { text: "Avatr", logo_url: "/logos/avatr.png" },
+    { text: "BYD", logo_url: "/logos/byd.png" },
+    { text: "BMW", logo_url: "/logos/bmw.png" },
   ],
 };
 

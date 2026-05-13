@@ -319,15 +319,36 @@ section{position:relative}
 }
 @keyframes scrollLine{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
 
-.hero__ticker{
-  position:absolute;right:clamp(1rem,4vw,3rem);top:50%;transform:translateY(-50%);
-  display:flex;flex-direction:column;gap:1rem;align-items:flex-end;
-  font-family:var(--ff-mono);font-size:.7rem;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--stone);opacity:.8;
+/* Design's horizontal 4-cell ticker rail under the hero foot. */
+.hero__ticker-rail{
+  margin-top:clamp(3rem, 6vw, 5rem);
+  display:grid;grid-template-columns:repeat(4, 1fr);
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
 }
-.hero__ticker strong{color:var(--bone);font-weight:500;font-size:.78rem}
-.hero__ticker span{display:block}
-@media (max-width: 900px){.hero__ticker{display:none}}
+.hero__ticker-cell{
+  padding:1.4rem 1.2rem;
+  display:flex;flex-direction:column;gap:.35rem;
+  border-right:1px solid var(--line);
+}
+.hero__ticker-cell:last-child{border-right:none}
+.hero__ticker-k{
+  font-family:var(--ff-mono);font-size:.66rem;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--stone);
+}
+.hero__ticker-v{
+  font-family:var(--ff-display);font-weight:300;font-size:1.6rem;
+  letter-spacing:-.015em;color:var(--bone);line-height:1;
+}
+.hero__ticker-v small{
+  font-family:var(--ff-mono);font-size:.7rem;color:var(--stone);
+  letter-spacing:.1em;margin-left:.2rem;
+}
+@media (max-width:760px){
+  .hero__ticker-rail{grid-template-columns:1fr 1fr}
+  .hero__ticker-cell:nth-child(2n){border-right:none}
+  .hero__ticker-cell:nth-child(-n+2){border-bottom:1px solid var(--line)}
+}
 
 /* =======================================================================
    MARQUEE
@@ -657,6 +678,58 @@ section{position:relative}
   display:flex;align-items:center;
 }
 .route__map svg{width:100%;height:100%;overflow:visible}
+
+/* Real-world map via Leaflet — desaturate + tint tiles toward gold/bone
+   so the map reads as part of the editorial design, not a generic web
+   map. Container needs a fixed height for Leaflet to compute layout. */
+.route__map--leaflet{
+  height:280px;border-radius:10px;overflow:hidden;
+  border:1px solid var(--line);
+  background:
+    radial-gradient(120% 80% at 50% 50%, rgba(201,168,76,.06), transparent 70%),
+    linear-gradient(180deg, rgba(11,16,34,.6), rgba(6,10,20,.4));
+}
+.route__map--leaflet .leaflet-container{
+  width:100%;height:100%;background:#070b18;
+  font-family:var(--ff-mono);
+}
+.route__map--leaflet .leaflet-tile-pane{
+  filter:grayscale(1) brightness(.55) contrast(1.05) sepia(.35) hue-rotate(-12deg);
+  opacity:.85;
+}
+.route__map--leaflet .leaflet-control-attribution{
+  background:rgba(7,11,24,.7);color:#6b7388;
+  font-family:var(--ff-mono);font-size:9px;letter-spacing:.04em;
+  border-top-left-radius:6px;padding:2px 6px;
+}
+.route__map--leaflet .leaflet-control-attribution a{color:var(--stone)}
+.route__map--leaflet .leaflet-control-zoom{display:none}
+
+.lane-port-tip{
+  background:rgba(7,11,24,.92);color:var(--bone);
+  border:1px solid rgba(201,168,76,.5);
+  border-radius:2px;padding:3px 7px;
+  font-family:var(--ff-mono);font-size:9.5px;
+  letter-spacing:.14em;text-transform:uppercase;
+  white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.4);
+}
+.lane-port-tip::before{display:none}
+.lane-via-tip{
+  background:rgba(7,11,24,.7);color:rgba(238,232,220,.85);
+  border:1px solid rgba(201,168,76,.25);
+  border-radius:2px;padding:2px 6px;
+  font-family:var(--ff-display);font-style:italic;
+  font-size:10px;letter-spacing:.02em;white-space:nowrap;
+}
+.lane-via-tip::before{display:none}
+.lane-distance-tip{
+  background:rgba(7,11,24,.92);color:rgba(201,168,76,.95);
+  border:1px solid rgba(201,168,76,.4);
+  border-radius:2px;padding:4px 10px;
+  font-family:var(--ff-mono);font-size:10px;
+  letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;
+}
+.lane-distance-tip::before{display:none}
 
 .route__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;padding-top:1.5rem;border-top:1px solid var(--line)}
 .route__stat-label{font-family:var(--ff-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--stone);margin-bottom:.3rem}
