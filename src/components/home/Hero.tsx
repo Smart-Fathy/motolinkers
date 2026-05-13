@@ -115,24 +115,21 @@ export default function Hero({
             ))}
           </div>
         </div>
-      </div>
 
-      <aside className="hero__ticker" aria-hidden="true">
-        {data.ticker.map((t, i) => (
-          <div key={i}>
-            <strong>
-              {t.value}
-              {t.value_suffix && (
-                <>
-                  {" "}
-                  <small>{t.value_suffix}</small>
-                </>
-              )}
-            </strong>
-            <span>{t.label}</span>
-          </div>
-        ))}
-      </aside>
+        {data.ticker.length > 0 && (
+          <aside className="hero__ticker-rail" aria-hidden="true">
+            {data.ticker.map((t, i) => (
+              <div key={i} className="hero__ticker-cell">
+                <span className="hero__ticker-k">{t.label}</span>
+                <span className="hero__ticker-v">
+                  {t.value}
+                  {t.value_suffix && <small>{t.value_suffix}</small>}
+                </span>
+              </div>
+            ))}
+          </aside>
+        )}
+      </div>
 
       <div className="hero__scroll">
         <span>{data.scroll_label}</span>
