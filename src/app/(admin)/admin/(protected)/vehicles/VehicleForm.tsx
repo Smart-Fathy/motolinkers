@@ -759,7 +759,12 @@ export default function VehicleForm({ vehicle }: { vehicle?: Vehicle }) {
         {panoUrl && (
           <div className="adm__thumb-row" style={{ marginTop: ".6rem" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={panoUrl} alt="" className="adm__thumb adm__thumb--cover" />
+            <img
+              src={panoUrl}
+              alt=""
+              className="adm__thumb adm__thumb--cover"
+              crossOrigin="anonymous"
+            />
           </div>
         )}
       </div>
