@@ -1,6 +1,12 @@
 export interface MarqueeItem {
   text: string;
   italic?: boolean;
+  /** Optional brand logo URL. When present, renders an <img> tinted to
+   *  bone-white; the `text` value is still used as the alt attribute. */
+  logo_url?: string;
+  /** If true, the logo image keeps its native colors (no white tint).
+   *  Used for multi-color emblems like a real BMW roundel. */
+  logo_keep_color?: boolean;
 }
 
 export interface MarqueeData {
@@ -9,15 +15,31 @@ export interface MarqueeData {
 
 export const MARQUEE_DEFAULT_DATA: MarqueeData = {
   items: [
+    { text: "Toyota" },
+    { text: "Nissan" },
+    { text: "Mazda" },
+    { text: "iCar" },
+    { text: "Deepal" },
     { text: "Avatr" },
-    { text: "Deepal", italic: true },
-    { text: "Zeekr" },
-    { text: "Mazda", italic: true },
-    { text: "GAC" },
-    { text: "Changan", italic: true },
-    { text: "ROX" },
+    { text: "BYD" },
+    { text: "BMW" },
   ],
 };
+
+function MarqueeItemContent({ item }: { item: MarqueeItem }) {
+  if (item.logo_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={item.logo_url}
+        alt={item.text}
+        className={`marquee__logo${item.logo_keep_color ? " marquee__logo--keep" : ""}`}
+        loading="lazy"
+      />
+    );
+  }
+  return item.italic ? <em>{item.text}</em> : <>{item.text}</>;
+}
 
 export default function Marquee({
   data = MARQUEE_DEFAULT_DATA,
@@ -32,7 +54,7 @@ export default function Marquee({
         {items
           .map((item, i) => (
             <span key={`a-${i}`} className="marquee__item">
-              {item.italic ? <em>{item.text}</em> : item.text}
+              <MarqueeItemContent item={item} />
             </span>
           ))
           .flatMap((node, i) => [
@@ -43,7 +65,7 @@ export default function Marquee({
         {items
           .map((item, i) => (
             <span key={`b-${i}`} className="marquee__item">
-              {item.italic ? <em>{item.text}</em> : item.text}
+              <MarqueeItemContent item={item} />
             </span>
           ))
           .flatMap((node, i) => [

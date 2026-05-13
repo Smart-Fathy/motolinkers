@@ -1,4 +1,5 @@
 import Button from "@/components/ui/Button";
+import Label from "@/components/ui/Label";
 import { renderInlineHtml } from "@/lib/cms-html";
 
 export interface HeroMeta {
@@ -23,6 +24,8 @@ export interface HeroTickerItem {
 
 export interface HeroBlockData {
   meta: HeroMeta;
+  /** Optional gold kicker label that sits above the title (e.g. "Egypt's EV import consultancy — 2026"). */
+  kicker?: string;
   title_lines: string[]; // each line may contain <em> for accent
   aria_label: string;
   lede_html: string;
@@ -38,6 +41,7 @@ export const HERO_DEFAULT_DATA: HeroBlockData = {
     col2_top: "N 30.0444 · E 31.2357",
     col2_bot: "Sun–Thu 11:00–23:00 · Sat 15:00–23:00 · Fri closed",
   },
+  kicker: "Egypt's EV import consultancy — 2026",
   title_lines: ["Transparency", "is the new", "<em>luxury.</em>"],
   aria_label: "Transparency is the new luxury.",
   lede_html:
@@ -65,6 +69,7 @@ export default function Hero({
       <div className="hero__bg" aria-hidden="true" />
       <div className="hero__mesh" aria-hidden="true" />
       <div className="hero__grid" aria-hidden="true" />
+      <div className="hero__ornament" aria-hidden="true" />
 
       <div className="wrap" style={{ width: "100%" }}>
         <div className="hero__meta">
@@ -80,6 +85,12 @@ export default function Hero({
             <span>{data.meta.col2_bot}</span>
           </div>
         </div>
+
+        {data.kicker && (
+          <div className="hero__kicker">
+            <Label>{data.kicker}</Label>
+          </div>
+        )}
 
         <h1 className="hero__title" aria-label={data.aria_label}>
           {data.title_lines.map((line, i) => (

@@ -47,23 +47,26 @@ export const ROUTES_DEFAULT_DATA: RoutesData = {
       to: "Alexandria",
       lane_label: "Lane 01",
       freight_prefix: "$",
-      freight_value: "4,025",
-      transit_value: "45",
+      freight_value: "5,800",
+      transit_value: "60",
       transit_suffix: "d",
       carriers_value: "12",
       carriers_suffix: "+",
-      svg_top_left: "GZHOU · CN",
+      svg_top_left: "NANSHA · CN",
       svg_top_right: "ALX · EG",
-      svg_bottom: "≈ 12,800 KM · SUEZ CANAL",
+      svg_bottom: "≈ 22,000 KM · CAPE OF GOOD HOPE",
       gradient_id: "gradCN",
       gradient_from: "#DE2910",
       gradient_to: "#C9A84C",
-      svg_path: "M30 110 Q 180 10, 300 80 T 570 60",
-      svg_dot_from: { cx: 30, cy: 110 },
-      svg_dot_to: { cx: 570, cy: 60 },
-      svg_top_left_pos: { x: 30, y: 140 },
-      svg_top_right_pos: { x: 570, y: 40 },
-      svg_bottom_pos: { x: 300, y: 150 },
+      // Deep south-bound arc through the Cape, then up the Atlantic to
+      // the Mediterranean. Right-to-left dip mirrors the Cape route
+      // shape on a north-up world map.
+      svg_path: "M30 30 Q 200 200, 320 200 T 570 30",
+      svg_dot_from: { cx: 30, cy: 30 },
+      svg_dot_to: { cx: 570, cy: 30 },
+      svg_top_left_pos: { x: 70, y: 18 },
+      svg_top_right_pos: { x: 530, y: 18 },
+      svg_bottom_pos: { x: 300, y: 240 },
     },
     {
       flag_from: "ae",
@@ -72,23 +75,23 @@ export const ROUTES_DEFAULT_DATA: RoutesData = {
       to: "Alexandria",
       lane_label: "Lane 02",
       freight_prefix: "$",
-      freight_value: "2,900",
-      transit_value: "28",
+      freight_value: "4,800",
+      transit_value: "55",
       transit_suffix: "d",
       carriers_value: "7",
       carriers_suffix: "+",
       svg_top_left: "DXB · AE",
       svg_top_right: "ALX · EG",
-      svg_bottom: "≈ 5,200 KM · RED SEA",
+      svg_bottom: "≈ 18,500 KM · CAPE OF GOOD HOPE",
       gradient_id: "gradAE",
       gradient_from: "#00732F",
       gradient_to: "#C9A84C",
-      svg_path: "M30 80 Q 250 30, 570 80",
-      svg_dot_from: { cx: 30, cy: 80 },
-      svg_dot_to: { cx: 570, cy: 80 },
-      svg_top_left_pos: { x: 30, y: 110 },
-      svg_top_right_pos: { x: 570, y: 110 },
-      svg_bottom_pos: { x: 300, y: 30 },
+      svg_path: "M30 40 Q 220 220, 340 220 T 570 40",
+      svg_dot_from: { cx: 30, cy: 40 },
+      svg_dot_to: { cx: 570, cy: 40 },
+      svg_top_left_pos: { x: 70, y: 28 },
+      svg_top_right_pos: { x: 530, y: 28 },
+      svg_bottom_pos: { x: 300, y: 250 },
     },
   ],
 };
@@ -127,7 +130,7 @@ export default function Routes({
               </div>
 
               <div className="route__map" aria-hidden="true">
-                <svg viewBox="0 0 600 160" preserveAspectRatio="none">
+                <svg viewBox="0 0 600 280" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id={r.gradient_id} x1="0" x2="1">
                       <stop offset="0%" stopColor={r.gradient_from} />
