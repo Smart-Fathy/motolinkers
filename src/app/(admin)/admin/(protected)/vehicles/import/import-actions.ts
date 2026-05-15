@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createClient } from "@/lib/supabase/server";
 import { googleSheetExportUrl, parseCsv } from "@/lib/csv";
 import { categoriseFeature } from "@/lib/feature-categories";
@@ -576,4 +577,221 @@ export async function applyImport(payload: ApplyPayload): Promise<ApplyResult> {
   revalidatePath("/admin/vehicles");
 
   return { ok: true, results };
+}
+
+// ─── Autohome URL importer ──────────────────────────────────────────
+//
+// Admin pastes a single autohome.com.cn spec page URL. The Railway
+// pano-importer service does the actual fetch + HTML scrape (so we
+// keep the autohome dependency off Cloudflare Workers), and returns a
+// structured payload that the wizard renders as a per-field diff. The
+// admin ticks the fields they want, then `applyAutohomeScrape` creates
+// a new vehicle row using only those values.
+
+export type AutohomeScrape = {
+  source_url: string;
+  name?: string;
+  brand?: string;
+  model?: string;
+  trim?: string;
+  year?: number;
+  body?: string;
+  range_km?: number;
+  motor_power_ps?: number;
+  motor_power_kw?: number;
+  battery_kwh?: number;
+  top_speed_kmh?: number;
+  acceleration_0_100?: number;
+  drivetrain?: string;
+  transmission?: string;
+  seats?: number;
+  price_cny?: number;
+  features?: Record<string, string[]>;
+  raw_specs?: Record<string, string>;
+  page_title?: string;
+};
+
+export type PreviewAutohomeResult =
+  | { ok: true; spec: AutohomeScrape }
+  | { error: string };
+
+async function importerEnv(): Promise<{ url: string; token: string } | null> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const e = env as unknown as {
+      PANO_IMPORTER_URL?: string;
+      PANO_IMPORTER_TOKEN?: string;
+    };
+    const url = e.PANO_IMPORTER_URL ?? process.env.PANO_IMPORTER_URL;
+    const token = e.PANO_IMPORTER_TOKEN ?? process.env.PANO_IMPORTER_TOKEN;
+    if (!url || !token) return null;
+    return { url, token };
+  } catch {
+    return null;
+  }
+}
+
+export async function previewAutohomeImport(
+  url: string,
+): Promise<PreviewAutohomeResult> {
+  // Auth — same gate the rest of the admin uses.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const trimmed = url.trim();
+  if (!trimmed) return { error: "Paste an autohome.com.cn spec URL first." };
+  if (!/^https?:\/\/(www\.)?autohome\.com\.cn\//i.test(trimmed)) {
+    return {
+      error:
+        "URL must be on autohome.com.cn (e.g. https://www.autohome.com.cn/spec/71023/).",
+    };
+  }
+
+  const cfg = await importerEnv();
+  if (!cfg) {
+    return {
+      error:
+        "Importer not configured (missing PANO_IMPORTER_URL / PANO_IMPORTER_TOKEN).",
+    };
+  }
+
+  try {
+    const res = await fetch(`${cfg.url.replace(/\/$/, "")}/import-spec`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${cfg.token}`,
+      },
+      body: JSON.stringify({ url: trimmed }),
+      cache: "no-store",
+    });
+    const body = (await res.json().catch(() => null)) as
+      | { spec?: AutohomeScrape; error?: string }
+      | null;
+    if (!res.ok || !body || !body.spec) {
+      return { error: body?.error ?? `Importer returned HTTP ${res.status}.` };
+    }
+    return { ok: true, spec: body.spec };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { error: `Could not reach importer: ${msg}.` };
+  }
+}
+
+export type ApplyAutohomePayload = {
+  scrape: AutohomeScrape;
+  /** Field names from AutohomeScrape the admin opted to apply. */
+  acceptedFields: string[];
+  /** Slug to use for the new vehicle. */
+  slug: string;
+  /** Origin assignment is admin-only — autohome pages don't surface country of import. */
+  origin: Origin;
+  /** Powertrain type assignment is also admin-only. */
+  type: PowerTrain;
+};
+
+export type ApplyAutohomeResult =
+  | { ok: true; vehicleId: string; slug: string }
+  | { error: string };
+
+/**
+ * Build a feature dictionary in the same shape the per-vehicle CMS row
+ * expects: `{ "Section": ["Item", "Item"], ... }`. The scrape already
+ * groups features by autohome's section headings; we keep that
+ * grouping verbatim so the admin can rename sections after import.
+ */
+function featuresForRow(
+  features: Record<string, string[]> | undefined,
+): Record<string, string[]> {
+  if (!features) return {};
+  const out: Record<string, string[]> = {};
+  for (const [section, items] of Object.entries(features)) {
+    const trimmed = section.trim() || "Features";
+    const list = items.map((s) => s.trim()).filter(Boolean);
+    if (list.length > 0) out[trimmed] = list;
+  }
+  return out;
+}
+
+export async function applyAutohomeScrape(
+  payload: ApplyAutohomePayload,
+): Promise<ApplyAutohomeResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { scrape, acceptedFields, slug, origin, type } = payload;
+  if (!slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+    return { error: "Slug must be lowercase letters, numbers, and dashes." };
+  }
+
+  const accept = new Set(acceptedFields);
+  const insert: Record<string, unknown> = {
+    slug,
+    origin,
+    type,
+    is_published: false,
+    is_featured: false,
+  };
+
+  if (accept.has("name") && scrape.name) insert.name = scrape.name;
+  else insert.name = scrape.name ?? `Imported ${slug}`;
+  if (accept.has("brand") && scrape.brand) insert.brand = scrape.brand;
+  if (accept.has("model") && scrape.model) insert.model = scrape.model;
+  if (accept.has("trim") && scrape.trim) insert.trim = scrape.trim;
+  if (accept.has("year") && scrape.year) insert.year = scrape.year;
+  if (accept.has("body") && scrape.body) {
+    const b = scrape.body.toLowerCase();
+    if ((BODIES as readonly string[]).includes(b)) insert.body = b;
+  }
+  if (accept.has("range_km") && scrape.range_km !== undefined) {
+    insert.range_km = Math.round(scrape.range_km);
+  }
+  if (accept.has("motor_power_ps") && scrape.motor_power_ps !== undefined) {
+    insert.motor_power_ps = Math.round(scrape.motor_power_ps);
+  }
+  if (accept.has("battery_kwh") && scrape.battery_kwh !== undefined) {
+    insert.battery_kwh = scrape.battery_kwh;
+  }
+  if (accept.has("top_speed_kmh") && scrape.top_speed_kmh !== undefined) {
+    insert.top_speed_kmh = Math.round(scrape.top_speed_kmh);
+  }
+  if (accept.has("acceleration_0_100") && scrape.acceleration_0_100 !== undefined) {
+    insert.acceleration_0_100 = scrape.acceleration_0_100;
+  }
+  if (accept.has("drivetrain") && scrape.drivetrain) {
+    insert.drive_type = scrape.drivetrain;
+  }
+  if (accept.has("transmission") && scrape.transmission) {
+    insert.transmission = scrape.transmission;
+  }
+  if (accept.has("seats") && scrape.seats !== undefined) {
+    insert.seats = Math.round(scrape.seats);
+  }
+  if (accept.has("features") && scrape.features) {
+    insert.features = featuresForRow(scrape.features);
+  }
+
+  // Supabase's generated Insert type expects every required column; we
+  // intentionally omit a lot here because the admin will fill the rest
+  // on the edit form. Cast through `unknown` to bypass the strict
+  // shape check.
+  const { data, error } = await supabase
+    .from("vehicles")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert(insert as any)
+    .select("id, slug")
+    .single();
+  if (error) return { error: `Database error: ${error.message}` };
+
+  revalidatePath("/");
+  revalidatePath("/vehicles");
+  revalidatePath("/admin/vehicles");
+
+  return { ok: true, vehicleId: data.id, slug: data.slug };
 }
