@@ -59,7 +59,7 @@ const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
 export async function scrapeAutohomeSpec(url: string): Promise<SpecScrapeResult> {
-  if (!/^https?:\/\/(www\.)?autohome\.com\.cn\//i.test(url)) {
+  if (!/^https?:\/\/([a-z0-9-]+\.)?autohome\.com\.cn\//i.test(url)) {
     throw new Error("Not an autohome.com.cn spec URL.");
   }
 
