@@ -1,6 +1,5 @@
 "use server";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createClient } from "@/lib/supabase/server";
@@ -672,124 +671,128 @@ function stripAutohomeBoilerplate(s: string | undefined): string | undefined {
   return out.trim();
 }
 
+const HAS_CJK = /[一-龥]/;
+
 /**
- * Translate the Chinese text fields of a scrape into English via Claude.
- * Returns the scrape unchanged if no API key is configured (the admin can
- * still proceed — they just see the Chinese in the diff). Uses Haiku 4.5
- * for cost: this is short structured text, not anything that needs Opus.
- * The system prompt is cached so repeated scrapes share the prefix.
+ * Translate Chinese strings to English using the free
+ * translate.googleapis.com gtx client endpoint. No API key.
+ *
+ * Strategy: dedupe → batches of 40 joined by "\n" → split the reply on
+ * "\n" to restore the 1:1 mapping. If the line count doesn't match
+ * (the endpoint sometimes splits or merges segments), retry that batch
+ * one string at a time. Treat the whole thing as best-effort — any
+ * failure returns whatever was translated and the caller falls back to
+ * the original Chinese for the rest.
  */
-async function translateScrape(
+async function translateChinese(
+  strings: string[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const unique = Array.from(new Set(strings.filter((s) => HAS_CJK.test(s))));
+  if (unique.length === 0) return out;
+
+  const fetchOne = async (q: string): Promise<string | null> => {
+    const u = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh-CN&tl=en&dt=t&q=${encodeURIComponent(q)}`;
+    try {
+      const r = await fetch(u, { cache: "no-store" });
+      if (!r.ok) return null;
+      const j = (await r.json()) as unknown;
+      if (!Array.isArray(j) || !Array.isArray(j[0])) return null;
+      const segs = j[0] as Array<[string, string, ...unknown[]]>;
+      return segs.map((s) => s[0]).join("");
+    } catch {
+      return null;
+    }
+  };
+
+  for (let i = 0; i < unique.length; i += 40) {
+    const batch = unique.slice(i, i + 40);
+    const joined = batch.join("\n");
+    const translated = await fetchOne(joined);
+    if (translated) {
+      const parts = translated.split("\n");
+      if (parts.length === batch.length) {
+        for (let j = 0; j < batch.length; j++) {
+          const t = parts[j]!.trim();
+          if (t) out.set(batch[j]!, t);
+        }
+        continue;
+      }
+    }
+    for (const s of batch) {
+      const t = await fetchOne(s);
+      if (t) out.set(s, t.trim());
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Walk a scrape, collect every Chinese string, translate them in one
+ * pass, then rewrite the scrape with the English versions. Strings
+ * already in English are passed through.
+ */
+async function translateScrapeViaGoogle(
   scrape: AutohomeScrape,
-  apiKey: string,
 ): Promise<AutohomeScrape> {
   const cleaned: AutohomeScrape = {
     ...scrape,
     name: stripAutohomeBoilerplate(scrape.name),
-    page_title: scrape.page_title,
   };
 
-  // Only translate fields that contain non-ASCII (i.e. likely Chinese).
-  const needsTranslation = (v: string | undefined): boolean =>
-    !!v && /[^\x00-\x7F]/.test(v);
-
-  const payload: Record<string, unknown> = {};
-  if (needsTranslation(cleaned.name)) payload.name = cleaned.name;
-  if (needsTranslation(cleaned.brand)) payload.brand = cleaned.brand;
-  if (needsTranslation(cleaned.model)) payload.model = cleaned.model;
-  if (needsTranslation(cleaned.trim)) payload.trim = cleaned.trim;
-  if (needsTranslation(cleaned.drivetrain)) payload.drivetrain = cleaned.drivetrain;
-  if (needsTranslation(cleaned.transmission))
-    payload.transmission = cleaned.transmission;
-  if (needsTranslation(cleaned.body)) payload.body = cleaned.body;
-  if (cleaned.features && Object.keys(cleaned.features).length > 0) {
-    // Translate keys (section headings) and items in one go.
-    payload.features = cleaned.features;
+  const collect: string[] = [];
+  const fields: Array<keyof AutohomeScrape> = [
+    "name",
+    "brand",
+    "model",
+    "trim",
+    "drivetrain",
+    "transmission",
+    "body",
+  ];
+  for (const f of fields) {
+    const v = cleaned[f];
+    if (typeof v === "string" && HAS_CJK.test(v)) collect.push(v);
   }
-
-  if (Object.keys(payload).length === 0) return cleaned;
-
-  const client = new Anthropic({ apiKey });
-  try {
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 2048,
-      system: [
-        {
-          type: "text",
-          text:
-            "You translate Chinese vehicle spec data into English. Rules:\n" +
-            "- Return ONLY a single JSON object with the same keys you received. No prose, no markdown fences.\n" +
-            "- Use the official English brand name where one exists (阿维塔→Avatr, 蔚来→NIO, 理想→Li Auto, 小鹏→XPeng, 比亚迪→BYD, 极氪→Zeekr, 智己→IM Motors, 极狐→Arcfox, 阿尔法 S→Alpha S). If unsure, transliterate using pinyin.\n" +
-            "- For trims, translate descriptive words but keep alphanumeric tokens verbatim (e.g. \"Pro纯电版\"→\"Pro Pure EV\", \"2025款 Ultra四驱长续航版\"→\"2025 Ultra AWD Long Range\").\n" +
-            "- For body: emit one of sedan, suv, hatchback, coupe, wagon, pickup, mpv, convertible. If the input doesn't map cleanly, return null.\n" +
-            "- For drivetrain: emit one of fwd, rwd, awd, 4wd. If unclear, return null.\n" +
-            "- For features: keep the same JSON shape ({\"Section\": [\"Item\", ...]}). Translate section headings to short English phrases (Title Case). Translate each item to a concise English phrase suitable for a spec sheet.\n" +
-            "- Preserve any key already in English unchanged.",
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [
-        {
-          role: "user",
-          content: `Translate this JSON to English following the rules. Return only the JSON object.\n\n${JSON.stringify(payload)}`,
-        },
-      ],
-    });
-
-    // Extract the first text block and parse it as JSON.
-    const textBlock = response.content.find(
-      (b): b is Anthropic.TextBlock => b.type === "text",
-    );
-    if (!textBlock) return cleaned;
-    const raw = textBlock.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-    let translated: Record<string, unknown>;
-    try {
-      translated = JSON.parse(raw);
-    } catch {
-      return cleaned;
-    }
-
-    const merged: AutohomeScrape = { ...cleaned };
-    const s = (k: keyof AutohomeScrape) => {
-      const v = translated[k as string];
-      return typeof v === "string" && v.trim() ? v.trim() : undefined;
-    };
-    merged.name = s("name") ?? merged.name;
-    merged.brand = s("brand") ?? merged.brand;
-    merged.model = s("model") ?? merged.model;
-    merged.trim = s("trim") ?? merged.trim;
-    merged.drivetrain = s("drivetrain") ?? merged.drivetrain;
-    merged.transmission = s("transmission") ?? merged.transmission;
-    merged.body = s("body") ?? merged.body;
-
-    if (translated.features && typeof translated.features === "object") {
-      const features: Record<string, string[]> = {};
-      for (const [k, v] of Object.entries(
-        translated.features as Record<string, unknown>,
-      )) {
-        if (Array.isArray(v)) {
-          features[k] = v.filter((x): x is string => typeof x === "string");
-        }
+  if (cleaned.features) {
+    for (const [section, items] of Object.entries(cleaned.features)) {
+      if (HAS_CJK.test(section)) collect.push(section);
+      for (const it of items) {
+        if (HAS_CJK.test(it)) collect.push(it);
       }
-      if (Object.keys(features).length > 0) merged.features = features;
     }
-    return merged;
-  } catch {
-    // Translation is best-effort — fall back to the cleaned scrape on any
-    // SDK / network / 4xx / 5xx error so the import flow still works.
-    return cleaned;
   }
-}
 
-async function anthropicApiKey(): Promise<string | null> {
-  try {
-    const { env } = await getCloudflareContext({ async: true });
-    const e = env as unknown as { ANTHROPIC_API_KEY?: string };
-    return e.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? null;
-  } catch {
-    return process.env.ANTHROPIC_API_KEY ?? null;
+  if (collect.length === 0) return cleaned;
+
+  const dict = await translateChinese(collect);
+  if (dict.size === 0) return cleaned;
+
+  const tr = (v: string | undefined): string | undefined =>
+    v && dict.has(v) ? dict.get(v)! : v;
+
+  const merged: AutohomeScrape = {
+    ...cleaned,
+    name: tr(cleaned.name),
+    brand: tr(cleaned.brand),
+    model: tr(cleaned.model),
+    trim: tr(cleaned.trim),
+    drivetrain: tr(cleaned.drivetrain),
+    transmission: tr(cleaned.transmission),
+    body: tr(cleaned.body),
+  };
+
+  if (cleaned.features) {
+    const outFeatures: Record<string, string[]> = {};
+    for (const [section, items] of Object.entries(cleaned.features)) {
+      const newSection = tr(section) ?? section;
+      outFeatures[newSection] = items.map((it) => tr(it) ?? it);
+    }
+    merged.features = outFeatures;
   }
+
+  return merged;
 }
 
 export async function previewAutohomeImport(
@@ -863,17 +866,12 @@ export async function previewAutohomeImport(
     return { error: first.error };
   }
 
-  // Translate each scrape to English. If no API key is configured, the
-  // helper returns the cleaned-but-untranslated scrape so the admin can
-  // still proceed (they just see Chinese in the diff and can edit it
-  // after import).
-  const apiKey = await anthropicApiKey();
-  const specs = apiKey
-    ? await Promise.all(scraped.map((s) => translateScrape(s, apiKey)))
-    : scraped.map((s) => ({
-        ...s,
-        name: stripAutohomeBoilerplate(s.name),
-      }));
+  // Translate each scrape to English via the free Google Translate gtx
+  // endpoint (no API key). Best-effort — anything the endpoint can't
+  // translate stays in Chinese and the admin can edit after import.
+  const specs = await Promise.all(
+    scraped.map((s) => translateScrapeViaGoogle(s)),
+  );
 
   return { ok: true, specs };
 }
