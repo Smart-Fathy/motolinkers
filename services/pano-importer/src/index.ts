@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { cubeToEquirect } from "./cube-to-equirect.js";
 import { downloadTiles, type TileRequest } from "./download-tiles.js";
 import { parseAutohome } from "./parse-autohome.js";
+import { scrapeAutohomeSpec } from "./scrape-autohome-spec.js";
 import { stitchFaces } from "./stitch-faces.js";
 import { uploadToR2 } from "./upload-r2.js";
 
@@ -11,6 +12,27 @@ const app = Fastify({ logger: true });
 const queue = new PQueue({ concurrency: 2 });
 
 app.get("/health", async () => ({ ok: true }));
+
+app.post<{ Body: { url?: string } }>("/import-spec", async (req, reply) => {
+  const auth = req.headers.authorization ?? "";
+  const expected = `Bearer ${requireEnv("IMPORTER_AUTH_TOKEN")}`;
+  if (auth !== expected) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+  const url = req.body?.url?.trim();
+  if (!url) return reply.code(400).send({ error: "Body must include { url }." });
+
+  try {
+    const data = await queue.add(() => scrapeAutohomeSpec(url), {
+      throwOnTimeout: true,
+    });
+    return reply.send({ spec: data });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    req.log.error({ err: e }, "spec scrape failed");
+    return reply.code(422).send({ error: msg });
+  }
+});
 
 app.post<{ Body: { url?: string; slug?: string } }>("/import-pano", async (req, reply) => {
   const auth = req.headers.authorization ?? "";

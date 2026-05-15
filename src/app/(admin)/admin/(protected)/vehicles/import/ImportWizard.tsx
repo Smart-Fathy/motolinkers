@@ -4,16 +4,56 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { slugify } from "@/lib/utils";
 import {
+  applyAutohomeScrape,
   applyImport,
+  previewAutohomeImport,
   previewImport,
+  type ApplyAutohomePayload,
+  type ApplyAutohomeResult,
   type ApplyPayload,
   type ApplyResult,
+  type AutohomeScrape,
+  type PreviewAutohomeResult,
   type PreviewResult,
   type SpecMappedTo,
   type SpecRow,
   type VariantColumn,
   type VariantDecision,
 } from "./import-actions";
+
+// Field-level diff used by the autohome-URL flow. Each diffable field
+// of AutohomeScrape gets a row in the preview table; the admin ticks
+// which ones to apply to the new vehicle row.
+const AUTOHOME_DIFF_FIELDS: { key: string; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "brand", label: "Brand" },
+  { key: "model", label: "Model" },
+  { key: "trim", label: "Trim" },
+  { key: "year", label: "Year" },
+  { key: "body", label: "Body" },
+  { key: "range_km", label: "Range (km)" },
+  { key: "motor_power_ps", label: "Motor power (PS)" },
+  { key: "battery_kwh", label: "Battery (kWh)" },
+  { key: "top_speed_kmh", label: "Top speed (km/h)" },
+  { key: "acceleration_0_100", label: "0–100 km/h (s)" },
+  { key: "drivetrain", label: "Drivetrain" },
+  { key: "transmission", label: "Transmission" },
+  { key: "seats", label: "Seats" },
+  { key: "features", label: "Features" },
+];
+
+function formatAutohomeField(key: string, scrape: AutohomeScrape): string {
+  if (key === "features") {
+    const f = scrape.features;
+    if (!f) return "";
+    const total = Object.values(f).reduce((n, arr) => n + arr.length, 0);
+    const sections = Object.keys(f).length;
+    return `${total} items across ${sections} section${sections === 1 ? "" : "s"}`;
+  }
+  const v = (scrape as unknown as Record<string, unknown>)[key];
+  if (v === undefined || v === null || v === "") return "";
+  return String(v);
+}
 
 type ExistingVehicle = { id: string; slug: string; name: string };
 
@@ -39,14 +79,31 @@ export default function ImportWizard({
 }: {
   existingVehicles: ExistingVehicle[];
 }) {
-  const [step, setStep] = useState<"source" | "mapping" | "result">("source");
+  const [step, setStep] = useState<
+    "source" | "mapping" | "autohome-diff" | "result"
+  >("source");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   // Source step
-  const [sourceKind, setSourceKind] = useState<"file" | "url">("file");
+  const [sourceKind, setSourceKind] = useState<"file" | "url" | "autohome">(
+    "file",
+  );
   const [url, setUrl] = useState("");
+  const [autohomeUrl, setAutohomeUrl] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // Autohome diff step
+  const [scrape, setScrape] = useState<AutohomeScrape | null>(null);
+  const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [scrapeSlug, setScrapeSlug] = useState("");
+  const [scrapeOrigin, setScrapeOrigin] = useState<"cn" | "ae">("cn");
+  const [scrapeType, setScrapeType] = useState<"ev" | "reev" | "phev" | "hybrid">(
+    "ev",
+  );
+  const [autohomeResult, setAutohomeResult] = useState<ApplyAutohomeResult | null>(
+    null,
+  );
 
   // Preview / mapping step
   const [preview, setPreview] = useState<{
@@ -113,11 +170,137 @@ export default function ImportWizard({
     setPreview(null);
     setResult(null);
     setUrl("");
+    setAutohomeUrl("");
+    setScrape(null);
+    setAccepted(new Set());
+    setScrapeSlug("");
+    setAutohomeResult(null);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const submitAutohome = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const r: PreviewAutohomeResult = await previewAutohomeImport(autohomeUrl);
+      if ("error" in r) {
+        setError(r.error);
+        return;
+      }
+      setScrape(r.spec);
+      // Default everything that has a non-empty value to "accepted".
+      const initial = new Set<string>();
+      for (const f of AUTOHOME_DIFF_FIELDS) {
+        if (formatAutohomeField(f.key, r.spec)) initial.add(f.key);
+      }
+      setAccepted(initial);
+      // Seed slug from the scraped name so the admin has a starting point.
+      if (r.spec.name) setScrapeSlug(slugify(r.spec.name));
+      setStep("autohome-diff");
+    });
+  };
+
+  const toggleAccepted = (key: string) =>
+    setAccepted((s) => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const applyAutohome = () => {
+    if (!scrape) return;
+    if (!scrapeSlug) {
+      setError("Set a slug for the new vehicle.");
+      return;
+    }
+    setError(null);
+    const payload: ApplyAutohomePayload = {
+      scrape,
+      acceptedFields: Array.from(accepted),
+      slug: scrapeSlug,
+      origin: scrapeOrigin,
+      type: scrapeType,
+    };
+    startTransition(async () => {
+      const r = await applyAutohomeScrape(payload);
+      setAutohomeResult(r);
+      setStep("result");
+    });
   };
 
   // ─── Source step ─────────────────────────────────────────────────────
   if (step === "source") {
+    // Autohome flow is its own form (different submit handler + no
+    // CSV/sheet plumbing). When the radio is on "autohome" we render
+    // a separate form below instead of trying to share the CSV form.
+    if (sourceKind === "autohome") {
+      return (
+        <form onSubmit={submitAutohome} className="imp__card">
+          <div className="imp__source-toggle">
+            <label className={`imp__radio${(sourceKind as string) === "file" ? " is-on" : ""}`}>
+              <input
+                type="radio"
+                name="kind"
+                checked={(sourceKind as string) === "file"}
+                onChange={() => setSourceKind("file")}
+              />
+              CSV file
+            </label>
+            <label className={`imp__radio${(sourceKind as string) === "url" ? " is-on" : ""}`}>
+              <input
+                type="radio"
+                name="kind"
+                checked={(sourceKind as string) === "url"}
+                onChange={() => setSourceKind("url")}
+              />
+              Google Sheets URL
+            </label>
+            <label className={`imp__radio${sourceKind === "autohome" ? " is-on" : ""}`}>
+              <input
+                type="radio"
+                name="kind"
+                checked={sourceKind === "autohome"}
+                onChange={() => setSourceKind("autohome")}
+              />
+              Autohome URL
+            </label>
+          </div>
+
+          <div className="adm__field">
+            <label className="adm__label" htmlFor="autohome-url">
+              Autohome spec page URL
+            </label>
+            <input
+              id="autohome-url"
+              type="url"
+              required
+              className="adm__input"
+              placeholder="https://www.autohome.com.cn/spec/71023/"
+              value={autohomeUrl}
+              onChange={(e) => setAutohomeUrl(e.target.value)}
+            />
+            <p className="adm__sub" style={{ marginTop: ".4rem", fontSize: ".8rem" }}>
+              Paste the URL of an autohome.com.cn spec page. The importer
+              fetches it, extracts powertrain specs and the feature list,
+              then shows a diff so you can opt each field in or out.
+            </p>
+          </div>
+
+          {error && <div className="adm__error">{error}</div>}
+
+          <div className="adm__form-actions">
+            <button type="submit" className="adm__btn adm__btn--primary" disabled={pending}>
+              {pending ? "Scraping…" : "Fetch and preview"}
+            </button>
+            <Link href="/admin/vehicles" className="adm__btn adm__btn--ghost">
+              Cancel
+            </Link>
+          </div>
+        </form>
+      );
+    }
+
     return (
       <form
         onSubmit={submitSource}
@@ -141,6 +324,15 @@ export default function ImportWizard({
               onChange={() => setSourceKind("url")}
             />
             Google Sheets URL
+          </label>
+          <label className={`imp__radio${(sourceKind as string) === "autohome" ? " is-on" : ""}`}>
+            <input
+              type="radio"
+              name="kind"
+              checked={(sourceKind as string) === "autohome"}
+              onChange={() => setSourceKind("autohome")}
+            />
+            Autohome URL
           </label>
         </div>
 
@@ -459,7 +651,172 @@ export default function ImportWizard({
     );
   }
 
-  // ─── Result step ─────────────────────────────────────────────────────
+  // ─── Autohome diff step ─────────────────────────────────────────────
+  if (step === "autohome-diff" && scrape) {
+    const visible = AUTOHOME_DIFF_FIELDS.filter((f) =>
+      formatAutohomeField(f.key, scrape),
+    );
+    return (
+      <div className="imp__card">
+        <p className="adm__sub" style={{ marginBottom: "1rem" }}>
+          Scraped from{" "}
+          <a href={scrape.source_url} target="_blank" rel="noopener noreferrer">
+            {scrape.source_url}
+          </a>
+          {scrape.page_title && (
+            <>
+              {" — "}
+              <em>{scrape.page_title}</em>
+            </>
+          )}
+        </p>
+
+        <div className="adm__field">
+          <label className="adm__label" htmlFor="ah-slug">
+            Slug for the new vehicle
+          </label>
+          <input
+            id="ah-slug"
+            type="text"
+            className="adm__input"
+            value={scrapeSlug}
+            onChange={(e) => setScrapeSlug(e.target.value)}
+            placeholder="avatr-06-ultra-ev"
+          />
+        </div>
+
+        <div className="adm__field" style={{ display: "flex", gap: "1rem" }}>
+          <div style={{ flex: 1 }}>
+            <label className="adm__label" htmlFor="ah-origin">Origin</label>
+            <select
+              id="ah-origin"
+              className="adm__input"
+              value={scrapeOrigin}
+              onChange={(e) => setScrapeOrigin(e.target.value as "cn" | "ae")}
+            >
+              <option value="cn">China</option>
+              <option value="ae">UAE</option>
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="adm__label" htmlFor="ah-type">Powertrain</label>
+            <select
+              id="ah-type"
+              className="adm__input"
+              value={scrapeType}
+              onChange={(e) =>
+                setScrapeType(e.target.value as "ev" | "reev" | "phev" | "hybrid")
+              }
+            >
+              <option value="ev">Pure EV</option>
+              <option value="reev">REEV</option>
+              <option value="phev">PHEV</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+          </div>
+        </div>
+
+        <table className="adm__table" style={{ marginTop: "1rem" }}>
+          <thead>
+            <tr>
+              <th style={{ width: "30%" }}>Field</th>
+              <th>Scraped value</th>
+              <th style={{ width: "80px", textAlign: "center" }}>Apply</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((f) => (
+              <tr key={f.key}>
+                <td>{f.label}</td>
+                <td>
+                  <span style={{ fontFamily: "var(--ff-mono)", fontSize: ".88rem" }}>
+                    {formatAutohomeField(f.key, scrape)}
+                  </span>
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="checkbox"
+                    checked={accepted.has(f.key)}
+                    onChange={() => toggleAccepted(f.key)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {scrape.features && Object.keys(scrape.features).length > 0 && accepted.has("features") && (
+          <details style={{ marginTop: "1rem" }}>
+            <summary className="adm__sub">Preview features</summary>
+            <ul style={{ marginTop: ".5rem" }}>
+              {Object.entries(scrape.features).map(([section, items]) => (
+                <li key={section}>
+                  <strong>{section}</strong>: {items.join(", ")}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
+        {error && <div className="adm__error">{error}</div>}
+
+        <div className="adm__form-actions">
+          <button
+            type="button"
+            className="adm__btn adm__btn--primary"
+            onClick={applyAutohome}
+            disabled={pending || accepted.size === 0}
+          >
+            {pending ? "Creating…" : `Create vehicle with ${accepted.size} fields`}
+          </button>
+          <button
+            type="button"
+            className="adm__btn adm__btn--ghost"
+            onClick={reset}
+          >
+            ← Start over
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Result step (autohome flow) ────────────────────────────────────
+  if (step === "result" && autohomeResult) {
+    if ("error" in autohomeResult) {
+      return (
+        <>
+          <div className="adm__error">{autohomeResult.error}</div>
+          <div className="adm__form-actions">
+            <button type="button" className="adm__btn adm__btn--ghost" onClick={reset}>
+              ← Start over
+            </button>
+          </div>
+        </>
+      );
+    }
+    return (
+      <>
+        <p className="adm__sub">
+          Created vehicle <strong>{autohomeResult.slug}</strong>. Open it to add
+          images, pricing, and publish.
+        </p>
+        <div className="adm__form-actions">
+          <Link
+            href={`/admin/vehicles/${autohomeResult.vehicleId}/edit`}
+            className="adm__btn adm__btn--primary"
+          >
+            Edit vehicle →
+          </Link>
+          <button type="button" className="adm__btn adm__btn--ghost" onClick={reset}>
+            Import another
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // ─── Result step (CSV/Sheet flow) ───────────────────────────────────
   if (step === "result" && result) {
     if ("error" in result) {
       return (
