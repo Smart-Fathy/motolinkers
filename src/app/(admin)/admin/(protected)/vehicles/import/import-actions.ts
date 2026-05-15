@@ -1,5 +1,6 @@
 "use server";
 
+import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createClient } from "@/lib/supabase/server";
@@ -653,6 +654,144 @@ function expandSpecUrls(input: string): string[] {
   return [input];
 }
 
+/**
+ * Strip autohome's SEO boilerplate from a scraped name. Autohome titles
+ * are usually shaped like `【图】 阿维塔06 2025款 Pro纯电版报价_图片_阿维塔`.
+ * The `_报价_图片_<brand>` / `_图片_<brand>` / `_<brand>` tail is the same
+ * brand name they put at the front, so trimming it gives us a cleaner
+ * `阿维塔06 2025款 Pro纯电版` to feed the translator.
+ */
+function stripAutohomeBoilerplate(s: string | undefined): string | undefined {
+  if (!s) return s;
+  let out = s;
+  out = out.replace(/^【[^】]*】\s*/g, "");
+  out = out.replace(/[-_\s]*汽车之家[^_]*$/g, "");
+  out = out.replace(/[_\s]*报价[_\s]*图片[_\s]*[^_\s]*$/g, "");
+  out = out.replace(/[_\s]*图片[_\s]*[^_\s]*$/g, "");
+  out = out.replace(/[_\s]*报价[_\s]*$/g, "");
+  return out.trim();
+}
+
+/**
+ * Translate the Chinese text fields of a scrape into English via Claude.
+ * Returns the scrape unchanged if no API key is configured (the admin can
+ * still proceed — they just see the Chinese in the diff). Uses Haiku 4.5
+ * for cost: this is short structured text, not anything that needs Opus.
+ * The system prompt is cached so repeated scrapes share the prefix.
+ */
+async function translateScrape(
+  scrape: AutohomeScrape,
+  apiKey: string,
+): Promise<AutohomeScrape> {
+  const cleaned: AutohomeScrape = {
+    ...scrape,
+    name: stripAutohomeBoilerplate(scrape.name),
+    page_title: scrape.page_title,
+  };
+
+  // Only translate fields that contain non-ASCII (i.e. likely Chinese).
+  const needsTranslation = (v: string | undefined): boolean =>
+    !!v && /[^\x00-\x7F]/.test(v);
+
+  const payload: Record<string, unknown> = {};
+  if (needsTranslation(cleaned.name)) payload.name = cleaned.name;
+  if (needsTranslation(cleaned.brand)) payload.brand = cleaned.brand;
+  if (needsTranslation(cleaned.model)) payload.model = cleaned.model;
+  if (needsTranslation(cleaned.trim)) payload.trim = cleaned.trim;
+  if (needsTranslation(cleaned.drivetrain)) payload.drivetrain = cleaned.drivetrain;
+  if (needsTranslation(cleaned.transmission))
+    payload.transmission = cleaned.transmission;
+  if (needsTranslation(cleaned.body)) payload.body = cleaned.body;
+  if (cleaned.features && Object.keys(cleaned.features).length > 0) {
+    // Translate keys (section headings) and items in one go.
+    payload.features = cleaned.features;
+  }
+
+  if (Object.keys(payload).length === 0) return cleaned;
+
+  const client = new Anthropic({ apiKey });
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 2048,
+      system: [
+        {
+          type: "text",
+          text:
+            "You translate Chinese vehicle spec data into English. Rules:\n" +
+            "- Return ONLY a single JSON object with the same keys you received. No prose, no markdown fences.\n" +
+            "- Use the official English brand name where one exists (阿维塔→Avatr, 蔚来→NIO, 理想→Li Auto, 小鹏→XPeng, 比亚迪→BYD, 极氪→Zeekr, 智己→IM Motors, 极狐→Arcfox, 阿尔法 S→Alpha S). If unsure, transliterate using pinyin.\n" +
+            "- For trims, translate descriptive words but keep alphanumeric tokens verbatim (e.g. \"Pro纯电版\"→\"Pro Pure EV\", \"2025款 Ultra四驱长续航版\"→\"2025 Ultra AWD Long Range\").\n" +
+            "- For body: emit one of sedan, suv, hatchback, coupe, wagon, pickup, mpv, convertible. If the input doesn't map cleanly, return null.\n" +
+            "- For drivetrain: emit one of fwd, rwd, awd, 4wd. If unclear, return null.\n" +
+            "- For features: keep the same JSON shape ({\"Section\": [\"Item\", ...]}). Translate section headings to short English phrases (Title Case). Translate each item to a concise English phrase suitable for a spec sheet.\n" +
+            "- Preserve any key already in English unchanged.",
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [
+        {
+          role: "user",
+          content: `Translate this JSON to English following the rules. Return only the JSON object.\n\n${JSON.stringify(payload)}`,
+        },
+      ],
+    });
+
+    // Extract the first text block and parse it as JSON.
+    const textBlock = response.content.find(
+      (b): b is Anthropic.TextBlock => b.type === "text",
+    );
+    if (!textBlock) return cleaned;
+    const raw = textBlock.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+    let translated: Record<string, unknown>;
+    try {
+      translated = JSON.parse(raw);
+    } catch {
+      return cleaned;
+    }
+
+    const merged: AutohomeScrape = { ...cleaned };
+    const s = (k: keyof AutohomeScrape) => {
+      const v = translated[k as string];
+      return typeof v === "string" && v.trim() ? v.trim() : undefined;
+    };
+    merged.name = s("name") ?? merged.name;
+    merged.brand = s("brand") ?? merged.brand;
+    merged.model = s("model") ?? merged.model;
+    merged.trim = s("trim") ?? merged.trim;
+    merged.drivetrain = s("drivetrain") ?? merged.drivetrain;
+    merged.transmission = s("transmission") ?? merged.transmission;
+    merged.body = s("body") ?? merged.body;
+
+    if (translated.features && typeof translated.features === "object") {
+      const features: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(
+        translated.features as Record<string, unknown>,
+      )) {
+        if (Array.isArray(v)) {
+          features[k] = v.filter((x): x is string => typeof x === "string");
+        }
+      }
+      if (Object.keys(features).length > 0) merged.features = features;
+    }
+    return merged;
+  } catch {
+    // Translation is best-effort — fall back to the cleaned scrape on any
+    // SDK / network / 4xx / 5xx error so the import flow still works.
+    return cleaned;
+  }
+}
+
+async function anthropicApiKey(): Promise<string | null> {
+  try {
+    const { env } = await getCloudflareContext({ async: true });
+    const e = env as unknown as { ANTHROPIC_API_KEY?: string };
+    return e.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? null;
+  } catch {
+    return process.env.ANTHROPIC_API_KEY ?? null;
+  }
+}
+
 export async function previewAutohomeImport(
   url: string,
 ): Promise<PreviewAutohomeResult> {
@@ -716,13 +855,26 @@ export async function previewAutohomeImport(
     }),
   );
 
-  const specs = results.filter(
+  const scraped = results.filter(
     (r): r is AutohomeScrape => !("error" in r),
   );
-  if (specs.length === 0) {
+  if (scraped.length === 0) {
     const first = results.find((r) => "error" in r) as { error: string };
     return { error: first.error };
   }
+
+  // Translate each scrape to English. If no API key is configured, the
+  // helper returns the cleaned-but-untranslated scrape so the admin can
+  // still proceed (they just see Chinese in the diff and can edit it
+  // after import).
+  const apiKey = await anthropicApiKey();
+  const specs = apiKey
+    ? await Promise.all(scraped.map((s) => translateScrape(s, apiKey)))
+    : scraped.map((s) => ({
+        ...s,
+        name: stripAutohomeBoilerplate(s.name),
+      }));
+
   return { ok: true, specs };
 }
 
