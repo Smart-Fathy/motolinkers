@@ -581,12 +581,14 @@ export async function applyImport(payload: ApplyPayload): Promise<ApplyResult> {
 
 // ─── Autohome URL importer ──────────────────────────────────────────
 //
-// Admin pastes a single autohome.com.cn spec page URL. The Railway
-// pano-importer service does the actual fetch + HTML scrape (so we
-// keep the autohome dependency off Cloudflare Workers), and returns a
-// structured payload that the wizard renders as a per-field diff. The
-// admin ticks the fields they want, then `applyAutohomeScrape` creates
-// a new vehicle row using only those values.
+// Admin pastes either a single autohome.com.cn spec page URL (e.g.
+// https://www.autohome.com.cn/spec/71023/) or a comparison page URL
+// (car.autohome.com.cn/duibi/chexing/#carids=A,B,C). The Railway
+// pano-importer service does the actual HTML fetch + scrape (keeping
+// the autohome dependency off Cloudflare Workers). The wizard then
+// shows one card per scraped vehicle with a skip / create / update
+// decision and per-field opt-in checkboxes — same model as the CSV
+// importer's variant columns.
 
 export type AutohomeScrape = {
   source_url: string;
@@ -612,7 +614,7 @@ export type AutohomeScrape = {
 };
 
 export type PreviewAutohomeResult =
-  | { ok: true; spec: AutohomeScrape }
+  | { ok: true; specs: AutohomeScrape[] }
   | { error: string };
 
 async function importerEnv(): Promise<{ url: string; token: string } | null> {
@@ -631,10 +633,29 @@ async function importerEnv(): Promise<{ url: string; token: string } | null> {
   }
 }
 
+/**
+ * Expand a pasted URL into a list of single-vehicle spec URLs.
+ *   - /spec/<id>/ → [self]
+ *   - /duibi/chexing/#carids=A,B,C → [spec/A, spec/B, spec/C]
+ *   - anything else with a carids= param → [spec/<each id>]
+ */
+function expandSpecUrls(input: string): string[] {
+  const carids = input.match(/carids=([^&#]+)/i);
+  if (carids) {
+    const ids = decodeURIComponent(carids[1]!)
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (ids.length > 0) {
+      return ids.map((id) => `https://www.autohome.com.cn/spec/${id}/`);
+    }
+  }
+  return [input];
+}
+
 export async function previewAutohomeImport(
   url: string,
 ): Promise<PreviewAutohomeResult> {
-  // Auth — same gate the rest of the admin uses.
   const supabase = await createClient();
   const {
     data: { user },
@@ -642,39 +663,17 @@ export async function previewAutohomeImport(
   if (!user) return { error: "Not authenticated." };
 
   const trimmed = url.trim();
-  if (!trimmed) return { error: "Paste an autohome.com.cn spec URL first." };
+  if (!trimmed) return { error: "Paste an autohome.com.cn URL first." };
   if (!/^https?:\/\/([a-z0-9-]+\.)?autohome\.com\.cn\//i.test(trimmed)) {
     return {
       error:
-        "URL must be on autohome.com.cn (e.g. https://www.autohome.com.cn/spec/71023/).",
+        "URL must be on autohome.com.cn (single spec like https://www.autohome.com.cn/spec/71023/ or a comparison page).",
     };
   }
-  // Autohome's comparison page (car.autohome.com.cn/duibi/chexing/)
-  // lists multiple vehicles via `carids=A,B,C` in the URL hash. We can
-  // only scrape a single vehicle at a time, so reject this with a
-  // helpful breakdown rather than letting the scraper fall over on a
-  // page that has no single-vehicle spec data.
-  if (/\/duibi\//i.test(trimmed) || /[?#].*carids=/i.test(trimmed)) {
-    const carids = (() => {
-      const m = trimmed.match(/carids=([^&]+)/i);
-      if (!m) return [] as string[];
-      return decodeURIComponent(m[1]!)
-        .split(/[,\s]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    })();
-    if (carids.length > 0) {
-      const urls = carids
-        .map((id) => `https://www.autohome.com.cn/spec/${id}/`)
-        .join("\n");
-      return {
-        error: `That's the comparison page (lists ${carids.length} vehicles). Paste a single spec URL instead — one of:\n${urls}`,
-      };
-    }
-    return {
-      error:
-        "Looks like a comparison/duibi page. Paste a single spec URL like https://www.autohome.com.cn/spec/71023/.",
-    };
+
+  const targets = expandSpecUrls(trimmed);
+  if (targets.length === 0) {
+    return { error: "Could not find any vehicle URLs in that link." };
   }
 
   const cfg = await importerEnv();
@@ -685,50 +684,86 @@ export async function previewAutohomeImport(
     };
   }
 
-  try {
-    const res = await fetch(`${cfg.url.replace(/\/$/, "")}/import-spec`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${cfg.token}`,
-      },
-      body: JSON.stringify({ url: trimmed }),
-      cache: "no-store",
-    });
-    const body = (await res.json().catch(() => null)) as
-      | { spec?: AutohomeScrape; error?: string }
-      | null;
-    if (!res.ok || !body || !body.spec) {
-      return { error: body?.error ?? `Importer returned HTTP ${res.status}.` };
-    }
-    return { ok: true, spec: body.spec };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { error: `Could not reach importer: ${msg}.` };
+  // Scrape each target in parallel. The Railway service queues them
+  // internally (concurrency 2), so this is mostly bound by autohome's
+  // response time.
+  const endpoint = `${cfg.url.replace(/\/$/, "")}/import-spec`;
+  const results = await Promise.all(
+    targets.map(async (t): Promise<AutohomeScrape | { error: string }> => {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${cfg.token}`,
+          },
+          body: JSON.stringify({ url: t }),
+          cache: "no-store",
+        });
+        const body = (await res.json().catch(() => null)) as
+          | { spec?: AutohomeScrape; error?: string }
+          | null;
+        if (!res.ok || !body || !body.spec) {
+          return {
+            error: body?.error ?? `Importer returned HTTP ${res.status}.`,
+          };
+        }
+        return body.spec;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { error: `Could not reach importer: ${msg}.` };
+      }
+    }),
+  );
+
+  const specs = results.filter(
+    (r): r is AutohomeScrape => !("error" in r),
+  );
+  if (specs.length === 0) {
+    const first = results.find((r) => "error" in r) as { error: string };
+    return { error: first.error };
   }
+  return { ok: true, specs };
 }
 
+export type AutohomeDecision =
+  | { kind: "skip" }
+  | {
+      kind: "create";
+      slug: string;
+      origin: Origin;
+      type: PowerTrain;
+      acceptedFields: string[];
+    }
+  | {
+      kind: "update";
+      vehicleId: string;
+      acceptedFields: string[];
+    };
+
 export type ApplyAutohomePayload = {
-  scrape: AutohomeScrape;
-  /** Field names from AutohomeScrape the admin opted to apply. */
-  acceptedFields: string[];
-  /** Slug to use for the new vehicle. */
-  slug: string;
-  /** Origin assignment is admin-only — autohome pages don't surface country of import. */
-  origin: Origin;
-  /** Powertrain type assignment is also admin-only. */
-  type: PowerTrain;
+  scrapes: AutohomeScrape[];
+  /** Keyed by scrape index in `scrapes`. */
+  decisions: Record<number, AutohomeDecision>;
 };
 
 export type ApplyAutohomeResult =
-  | { ok: true; vehicleId: string; slug: string }
+  | {
+      ok: true;
+      results: {
+        index: number;
+        slug: string;
+        status: string;
+        vehicleId?: string;
+      }[];
+    }
   | { error: string };
 
 /**
  * Build a feature dictionary in the same shape the per-vehicle CMS row
  * expects: `{ "Section": ["Item", "Item"], ... }`. The scrape already
- * groups features by autohome's section headings; we keep that
- * grouping verbatim so the admin can rename sections after import.
+ * groups features by autohome's section headings; we keep that grouping
+ * verbatim so the admin can rename sections after import.
  */
 function featuresForRow(
   features: Record<string, string[]> | undefined,
@@ -743,6 +778,59 @@ function featuresForRow(
   return out;
 }
 
+/**
+ * Translate a scrape + accepted-field set into a row patch. Used for
+ * both insert (create) and update flows — fields the admin didn't tick
+ * are simply absent from the returned object.
+ */
+function patchFromScrape(
+  scrape: AutohomeScrape,
+  acceptedFields: string[],
+): Record<string, unknown> {
+  const accept = new Set(acceptedFields);
+  const patch: Record<string, unknown> = {};
+  if (accept.has("name") && scrape.name) patch.name = scrape.name;
+  if (accept.has("brand") && scrape.brand) patch.brand = scrape.brand;
+  if (accept.has("model") && scrape.model) patch.model = scrape.model;
+  if (accept.has("trim") && scrape.trim) patch.trim = scrape.trim;
+  if (accept.has("year") && scrape.year) patch.year = scrape.year;
+  if (accept.has("body") && scrape.body) {
+    const b = scrape.body.toLowerCase();
+    if ((BODIES as readonly string[]).includes(b)) patch.body = b;
+  }
+  if (accept.has("range_km") && scrape.range_km !== undefined) {
+    patch.range_km = Math.round(scrape.range_km);
+  }
+  if (accept.has("motor_power_ps") && scrape.motor_power_ps !== undefined) {
+    patch.motor_power_ps = Math.round(scrape.motor_power_ps);
+  }
+  if (accept.has("battery_kwh") && scrape.battery_kwh !== undefined) {
+    patch.battery_kwh = scrape.battery_kwh;
+  }
+  if (accept.has("top_speed_kmh") && scrape.top_speed_kmh !== undefined) {
+    patch.top_speed_kmh = Math.round(scrape.top_speed_kmh);
+  }
+  if (
+    accept.has("acceleration_0_100") &&
+    scrape.acceleration_0_100 !== undefined
+  ) {
+    patch.acceleration_0_100 = scrape.acceleration_0_100;
+  }
+  if (accept.has("drivetrain") && scrape.drivetrain) {
+    patch.drive_type = scrape.drivetrain;
+  }
+  if (accept.has("transmission") && scrape.transmission) {
+    patch.transmission = scrape.transmission;
+  }
+  if (accept.has("seats") && scrape.seats !== undefined) {
+    patch.seats = Math.round(scrape.seats);
+  }
+  if (accept.has("features") && scrape.features) {
+    patch.features = featuresForRow(scrape.features);
+  }
+  return patch;
+}
+
 export async function applyAutohomeScrape(
   payload: ApplyAutohomePayload,
 ): Promise<ApplyAutohomeResult> {
@@ -752,73 +840,110 @@ export async function applyAutohomeScrape(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { scrape, acceptedFields, slug, origin, type } = payload;
-  if (!slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
-    return { error: "Slug must be lowercase letters, numbers, and dashes." };
+  const results: {
+    index: number;
+    slug: string;
+    status: string;
+    vehicleId?: string;
+  }[] = [];
+  const touchedSlugs = new Set<string>();
+
+  for (const [idxStr, decision] of Object.entries(payload.decisions)) {
+    const i = parseInt(idxStr, 10);
+    const scrape = payload.scrapes[i];
+    if (!scrape) continue;
+    if (decision.kind === "skip") {
+      results.push({ index: i, slug: "", status: "skipped" });
+      continue;
+    }
+
+    if (decision.kind === "create") {
+      if (!decision.slug || !/^[a-z0-9][a-z0-9-]*$/.test(decision.slug)) {
+        results.push({
+          index: i,
+          slug: decision.slug,
+          status: "error: slug must be lowercase letters, numbers, and dashes",
+        });
+        continue;
+      }
+      const patch = patchFromScrape(scrape, decision.acceptedFields);
+      const insert: Record<string, unknown> = {
+        ...patch,
+        slug: decision.slug,
+        origin: decision.origin,
+        type: decision.type,
+        // Required NOT NULL: fall back to scraped name or the slug.
+        name: patch.name ?? scrape.name ?? `Imported ${decision.slug}`,
+        is_published: false,
+        is_featured: false,
+      };
+      const { data, error } = await supabase
+        .from("vehicles")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(insert as any)
+        .select("id, slug")
+        .single();
+      if (error) {
+        results.push({
+          index: i,
+          slug: decision.slug,
+          status: `error: ${error.message}`,
+        });
+      } else {
+        results.push({
+          index: i,
+          slug: data.slug,
+          vehicleId: data.id,
+          status: "created",
+        });
+        touchedSlugs.add(data.slug);
+      }
+      continue;
+    }
+
+    // kind === "update"
+    if (!decision.vehicleId) {
+      results.push({ index: i, slug: "", status: "error: pick a vehicle" });
+      continue;
+    }
+    const patch = patchFromScrape(scrape, decision.acceptedFields);
+    if (Object.keys(patch).length === 0) {
+      results.push({
+        index: i,
+        slug: "",
+        status: "skipped (no fields ticked)",
+      });
+      continue;
+    }
+    const { data, error } = await supabase
+      .from("vehicles")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(patch as any)
+      .eq("id", decision.vehicleId)
+      .select("id, slug")
+      .single();
+    if (error) {
+      results.push({
+        index: i,
+        slug: "",
+        status: `error: ${error.message}`,
+      });
+    } else {
+      results.push({
+        index: i,
+        slug: data.slug,
+        vehicleId: data.id,
+        status: "updated",
+      });
+      touchedSlugs.add(data.slug);
+    }
   }
 
-  const accept = new Set(acceptedFields);
-  const insert: Record<string, unknown> = {
-    slug,
-    origin,
-    type,
-    is_published: false,
-    is_featured: false,
-  };
-
-  if (accept.has("name") && scrape.name) insert.name = scrape.name;
-  else insert.name = scrape.name ?? `Imported ${slug}`;
-  if (accept.has("brand") && scrape.brand) insert.brand = scrape.brand;
-  if (accept.has("model") && scrape.model) insert.model = scrape.model;
-  if (accept.has("trim") && scrape.trim) insert.trim = scrape.trim;
-  if (accept.has("year") && scrape.year) insert.year = scrape.year;
-  if (accept.has("body") && scrape.body) {
-    const b = scrape.body.toLowerCase();
-    if ((BODIES as readonly string[]).includes(b)) insert.body = b;
-  }
-  if (accept.has("range_km") && scrape.range_km !== undefined) {
-    insert.range_km = Math.round(scrape.range_km);
-  }
-  if (accept.has("motor_power_ps") && scrape.motor_power_ps !== undefined) {
-    insert.motor_power_ps = Math.round(scrape.motor_power_ps);
-  }
-  if (accept.has("battery_kwh") && scrape.battery_kwh !== undefined) {
-    insert.battery_kwh = scrape.battery_kwh;
-  }
-  if (accept.has("top_speed_kmh") && scrape.top_speed_kmh !== undefined) {
-    insert.top_speed_kmh = Math.round(scrape.top_speed_kmh);
-  }
-  if (accept.has("acceleration_0_100") && scrape.acceleration_0_100 !== undefined) {
-    insert.acceleration_0_100 = scrape.acceleration_0_100;
-  }
-  if (accept.has("drivetrain") && scrape.drivetrain) {
-    insert.drive_type = scrape.drivetrain;
-  }
-  if (accept.has("transmission") && scrape.transmission) {
-    insert.transmission = scrape.transmission;
-  }
-  if (accept.has("seats") && scrape.seats !== undefined) {
-    insert.seats = Math.round(scrape.seats);
-  }
-  if (accept.has("features") && scrape.features) {
-    insert.features = featuresForRow(scrape.features);
-  }
-
-  // Supabase's generated Insert type expects every required column; we
-  // intentionally omit a lot here because the admin will fill the rest
-  // on the edit form. Cast through `unknown` to bypass the strict
-  // shape check.
-  const { data, error } = await supabase
-    .from("vehicles")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert(insert as any)
-    .select("id, slug")
-    .single();
-  if (error) return { error: `Database error: ${error.message}` };
-
+  for (const slug of touchedSlugs) revalidatePath(`/vehicles/${slug}`);
   revalidatePath("/");
   revalidatePath("/vehicles");
   revalidatePath("/admin/vehicles");
 
-  return { ok: true, vehicleId: data.id, slug: data.slug };
+  return { ok: true, results };
 }
+

@@ -12,6 +12,7 @@ import {
   type ApplyAutohomeResult,
   type ApplyPayload,
   type ApplyResult,
+  type AutohomeDecision,
   type AutohomeScrape,
   type PreviewAutohomeResult,
   type PreviewResult,
@@ -93,13 +94,10 @@ export default function ImportWizard({
   const [autohomeUrl, setAutohomeUrl] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  // Autohome diff step
-  const [scrape, setScrape] = useState<AutohomeScrape | null>(null);
-  const [accepted, setAccepted] = useState<Set<string>>(new Set());
-  const [scrapeSlug, setScrapeSlug] = useState("");
-  const [scrapeOrigin, setScrapeOrigin] = useState<"cn" | "ae">("cn");
-  const [scrapeType, setScrapeType] = useState<"ev" | "reev" | "phev" | "hybrid">(
-    "ev",
+  // Autohome diff step — multiple scraped vehicles, one decision per.
+  const [scrapes, setScrapes] = useState<AutohomeScrape[] | null>(null);
+  const [ahDecisions, setAhDecisions] = useState<Record<number, AutohomeDecision>>(
+    {},
   );
   const [autohomeResult, setAutohomeResult] = useState<ApplyAutohomeResult | null>(
     null,
@@ -171,9 +169,8 @@ export default function ImportWizard({
     setResult(null);
     setUrl("");
     setAutohomeUrl("");
-    setScrape(null);
-    setAccepted(new Set());
-    setScrapeSlug("");
+    setScrapes(null);
+    setAhDecisions({});
     setAutohomeResult(null);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -187,41 +184,45 @@ export default function ImportWizard({
         setError(r.error);
         return;
       }
-      setScrape(r.spec);
-      // Default everything that has a non-empty value to "accepted".
-      const initial = new Set<string>();
-      for (const f of AUTOHOME_DIFF_FIELDS) {
-        if (formatAutohomeField(f.key, r.spec)) initial.add(f.key);
-      }
-      setAccepted(initial);
-      // Seed slug from the scraped name so the admin has a starting point.
-      if (r.spec.name) setScrapeSlug(slugify(r.spec.name));
+      setScrapes(r.specs);
+      // Default each scraped vehicle to "create" with every non-empty
+      // field ticked. Admin can switch any to skip or update existing.
+      const initial: Record<number, AutohomeDecision> = {};
+      r.specs.forEach((spec, i) => {
+        const accepted: string[] = [];
+        for (const f of AUTOHOME_DIFF_FIELDS) {
+          if (formatAutohomeField(f.key, spec)) accepted.push(f.key);
+        }
+        initial[i] = {
+          kind: "create",
+          slug: spec.name ? slugify(spec.name) : "",
+          origin: "cn",
+          type: "ev",
+          acceptedFields: accepted,
+        };
+      });
+      setAhDecisions(initial);
       setStep("autohome-diff");
     });
   };
 
-  const toggleAccepted = (key: string) =>
-    setAccepted((s) => {
-      const next = new Set(s);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
+  const setAhDecision = (i: number, next: AutohomeDecision) =>
+    setAhDecisions((d) => ({ ...d, [i]: next }));
+
+  const toggleAhField = (i: number, key: string) =>
+    setAhDecisions((d) => {
+      const cur = d[i];
+      if (!cur || cur.kind === "skip") return d;
+      const accepted = new Set(cur.acceptedFields);
+      if (accepted.has(key)) accepted.delete(key);
+      else accepted.add(key);
+      return { ...d, [i]: { ...cur, acceptedFields: Array.from(accepted) } };
     });
 
   const applyAutohome = () => {
-    if (!scrape) return;
-    if (!scrapeSlug) {
-      setError("Set a slug for the new vehicle.");
-      return;
-    }
+    if (!scrapes) return;
     setError(null);
-    const payload: ApplyAutohomePayload = {
-      scrape,
-      acceptedFields: Array.from(accepted),
-      slug: scrapeSlug,
-      origin: scrapeOrigin,
-      type: scrapeType,
-    };
+    const payload: ApplyAutohomePayload = { scrapes, decisions: ahDecisions };
     startTransition(async () => {
       const r = await applyAutohomeScrape(payload);
       setAutohomeResult(r);
@@ -281,13 +282,11 @@ export default function ImportWizard({
               onChange={(e) => setAutohomeUrl(e.target.value)}
             />
             <p className="adm__sub" style={{ marginTop: ".4rem", fontSize: ".8rem" }}>
-              Paste a single-vehicle spec page URL —{" "}
-              <code>https://www.autohome.com.cn/spec/&lt;id&gt;/</code>. The
-              comparison page (<code>car.autohome.com.cn/duibi/chexing/</code>)
-              isn&apos;t supported yet; open one of the cars from the compare
-              view and copy its spec URL. Importer extracts powertrain specs
-              and the feature list, then shows a diff so you opt each field
-              in or out.
+              Paste a single spec page (
+              <code>autohome.com.cn/spec/&lt;id&gt;/</code>) or a comparison
+              page (<code>car.autohome.com.cn/duibi/chexing/#carids=…</code>).
+              Each scraped vehicle gets its own create / update / skip choice
+              and per-field opt-in.
             </p>
           </div>
 
@@ -660,111 +659,215 @@ export default function ImportWizard({
   }
 
   // ─── Autohome diff step ─────────────────────────────────────────────
-  if (step === "autohome-diff" && scrape) {
-    const visible = AUTOHOME_DIFF_FIELDS.filter((f) =>
-      formatAutohomeField(f.key, scrape),
-    );
+  if (step === "autohome-diff" && scrapes) {
+    const actionable = Object.values(ahDecisions).filter(
+      (d) => d.kind !== "skip",
+    ).length;
     return (
-      <div className="imp__card">
-        <p className="adm__sub" style={{ marginBottom: "1rem" }}>
-          Scraped from{" "}
-          <a href={scrape.source_url} target="_blank" rel="noopener noreferrer">
-            {scrape.source_url}
-          </a>
-          {scrape.page_title && (
-            <>
-              {" — "}
-              <em>{scrape.page_title}</em>
-            </>
-          )}
-        </p>
-
-        <div className="adm__field">
-          <label className="adm__label" htmlFor="ah-slug">
-            Slug for the new vehicle
-          </label>
-          <input
-            id="ah-slug"
-            type="text"
-            className="adm__input"
-            value={scrapeSlug}
-            onChange={(e) => setScrapeSlug(e.target.value)}
-            placeholder="avatr-06-ultra-ev"
-          />
+      <>
+        <div className="imp__summary">
+          <span>{scrapes.length} scraped vehicle{scrapes.length === 1 ? "" : "s"}</span>
+          <span>{actionable} to create or update</span>
         </div>
 
-        <div className="adm__field" style={{ display: "flex", gap: "1rem" }}>
-          <div style={{ flex: 1 }}>
-            <label className="adm__label" htmlFor="ah-origin">Origin</label>
-            <select
-              id="ah-origin"
-              className="adm__input"
-              value={scrapeOrigin}
-              onChange={(e) => setScrapeOrigin(e.target.value as "cn" | "ae")}
-            >
-              <option value="cn">China</option>
-              <option value="ae">UAE</option>
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="adm__label" htmlFor="ah-type">Powertrain</label>
-            <select
-              id="ah-type"
-              className="adm__input"
-              value={scrapeType}
-              onChange={(e) =>
-                setScrapeType(e.target.value as "ev" | "reev" | "phev" | "hybrid")
-              }
-            >
-              <option value="ev">Pure EV</option>
-              <option value="reev">REEV</option>
-              <option value="phev">PHEV</option>
-              <option value="hybrid">Hybrid</option>
-            </select>
-          </div>
+        <div className="imp__variants">
+          {scrapes.map((scrape, i) => {
+            const decision = ahDecisions[i] ?? { kind: "skip" };
+            const visible = AUTOHOME_DIFF_FIELDS.filter((f) =>
+              formatAutohomeField(f.key, scrape),
+            );
+            const acceptedFields =
+              decision.kind === "skip" ? [] : decision.acceptedFields;
+            const acceptedSet = new Set(acceptedFields);
+            return (
+              <div key={i} className="imp__variant">
+                <div className="imp__variant-head">
+                  <div>
+                    <strong>{scrape.name ?? scrape.page_title ?? `Vehicle #${i + 1}`}</strong>
+                    <div className="adm__sub" style={{ fontSize: ".78rem" }}>
+                      <a href={scrape.source_url} target="_blank" rel="noopener noreferrer">
+                        {scrape.source_url}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: ".5rem" }}>
+                  <label className={`imp__radio${decision.kind === "skip" ? " is-on" : ""}`}>
+                    <input
+                      type="radio"
+                      name={`ah-decision-${i}`}
+                      checked={decision.kind === "skip"}
+                      onChange={() => setAhDecision(i, { kind: "skip" })}
+                    />
+                    Skip
+                  </label>
+                  <label className={`imp__radio${decision.kind === "create" ? " is-on" : ""}`}>
+                    <input
+                      type="radio"
+                      name={`ah-decision-${i}`}
+                      checked={decision.kind === "create"}
+                      onChange={() =>
+                        setAhDecision(i, {
+                          kind: "create",
+                          slug: scrape.name ? slugify(scrape.name) : "",
+                          origin: "cn",
+                          type: "ev",
+                          acceptedFields: visible
+                            .map((f) => f.key)
+                            .filter((k) => formatAutohomeField(k, scrape)),
+                        })
+                      }
+                    />
+                    Create new
+                  </label>
+                  <label className={`imp__radio${decision.kind === "update" ? " is-on" : ""}`}>
+                    <input
+                      type="radio"
+                      name={`ah-decision-${i}`}
+                      checked={decision.kind === "update"}
+                      onChange={() =>
+                        setAhDecision(i, {
+                          kind: "update",
+                          vehicleId: existingVehicles[0]?.id ?? "",
+                          acceptedFields: visible
+                            .map((f) => f.key)
+                            .filter((k) => formatAutohomeField(k, scrape)),
+                        })
+                      }
+                    />
+                    Update existing
+                  </label>
+                </div>
+
+                {decision.kind === "create" && (
+                  <div style={{ display: "flex", gap: "1rem", marginTop: ".75rem", flexWrap: "wrap" }}>
+                    <div style={{ flex: "2 1 18rem" }}>
+                      <label className="adm__label" htmlFor={`ah-slug-${i}`}>
+                        Slug
+                      </label>
+                      <input
+                        id={`ah-slug-${i}`}
+                        type="text"
+                        className="adm__input"
+                        value={decision.slug}
+                        onChange={(e) =>
+                          setAhDecision(i, { ...decision, slug: e.target.value })
+                        }
+                        placeholder="avatr-06-ultra-ev"
+                      />
+                    </div>
+                    <div style={{ flex: "1 1 8rem" }}>
+                      <label className="adm__label" htmlFor={`ah-origin-${i}`}>
+                        Origin
+                      </label>
+                      <select
+                        id={`ah-origin-${i}`}
+                        className="adm__input"
+                        value={decision.origin}
+                        onChange={(e) =>
+                          setAhDecision(i, {
+                            ...decision,
+                            origin: e.target.value as "cn" | "ae",
+                          })
+                        }
+                      >
+                        <option value="cn">China</option>
+                        <option value="ae">UAE</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: "1 1 8rem" }}>
+                      <label className="adm__label" htmlFor={`ah-type-${i}`}>
+                        Powertrain
+                      </label>
+                      <select
+                        id={`ah-type-${i}`}
+                        className="adm__input"
+                        value={decision.type}
+                        onChange={(e) =>
+                          setAhDecision(i, {
+                            ...decision,
+                            type: e.target.value as
+                              | "ev"
+                              | "reev"
+                              | "phev"
+                              | "hybrid",
+                          })
+                        }
+                      >
+                        <option value="ev">Pure EV</option>
+                        <option value="reev">REEV</option>
+                        <option value="phev">PHEV</option>
+                        <option value="hybrid">Hybrid</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {decision.kind === "update" && (
+                  <div className="adm__field" style={{ marginTop: ".75rem" }}>
+                    <label className="adm__label" htmlFor={`ah-target-${i}`}>
+                      Vehicle to update
+                    </label>
+                    <select
+                      id={`ah-target-${i}`}
+                      className="adm__input"
+                      value={decision.vehicleId}
+                      onChange={(e) =>
+                        setAhDecision(i, {
+                          ...decision,
+                          vehicleId: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">— pick a vehicle —</option>
+                      {existingVehicles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name} ({v.slug})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="adm__sub" style={{ fontSize: ".78rem", marginTop: ".25rem" }}>
+                      Ticked fields below will overwrite the matching columns
+                      on this vehicle. Unticked fields stay as they are.
+                    </p>
+                  </div>
+                )}
+
+                {decision.kind !== "skip" && (
+                  <table className="adm__table" style={{ marginTop: ".75rem" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: "30%" }}>Field</th>
+                        <th>Scraped value</th>
+                        <th style={{ width: "70px", textAlign: "center" }}>Apply</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visible.map((f) => (
+                        <tr key={f.key}>
+                          <td>{f.label}</td>
+                          <td>
+                            <span style={{ fontFamily: "var(--ff-mono)", fontSize: ".85rem" }}>
+                              {formatAutohomeField(f.key, scrape)}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <input
+                              type="checkbox"
+                              checked={acceptedSet.has(f.key)}
+                              onChange={() => toggleAhField(i, f.key)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            );
+          })}
         </div>
-
-        <table className="adm__table" style={{ marginTop: "1rem" }}>
-          <thead>
-            <tr>
-              <th style={{ width: "30%" }}>Field</th>
-              <th>Scraped value</th>
-              <th style={{ width: "80px", textAlign: "center" }}>Apply</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((f) => (
-              <tr key={f.key}>
-                <td>{f.label}</td>
-                <td>
-                  <span style={{ fontFamily: "var(--ff-mono)", fontSize: ".88rem" }}>
-                    {formatAutohomeField(f.key, scrape)}
-                  </span>
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={accepted.has(f.key)}
-                    onChange={() => toggleAccepted(f.key)}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {scrape.features && Object.keys(scrape.features).length > 0 && accepted.has("features") && (
-          <details style={{ marginTop: "1rem" }}>
-            <summary className="adm__sub">Preview features</summary>
-            <ul style={{ marginTop: ".5rem" }}>
-              {Object.entries(scrape.features).map(([section, items]) => (
-                <li key={section}>
-                  <strong>{section}</strong>: {items.join(", ")}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
 
         {error && <div className="adm__error">{error}</div>}
 
@@ -773,9 +876,11 @@ export default function ImportWizard({
             type="button"
             className="adm__btn adm__btn--primary"
             onClick={applyAutohome}
-            disabled={pending || accepted.size === 0}
+            disabled={pending || actionable === 0}
           >
-            {pending ? "Creating…" : `Create vehicle with ${accepted.size} fields`}
+            {pending
+              ? "Applying…"
+              : `Apply (${actionable} vehicle${actionable === 1 ? "" : "s"})`}
           </button>
           <button
             type="button"
@@ -785,7 +890,7 @@ export default function ImportWizard({
             ← Start over
           </button>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -806,16 +911,40 @@ export default function ImportWizard({
     return (
       <>
         <p className="adm__sub">
-          Created vehicle <strong>{autohomeResult.slug}</strong>. Open it to add
-          images, pricing, and publish.
+          Done. {autohomeResult.results.length} vehicle
+          {autohomeResult.results.length === 1 ? "" : "s"} processed.
         </p>
+        <table className="adm__table">
+          <thead>
+            <tr>
+              <th>Scrape</th>
+              <th>Slug</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {autohomeResult.results.map((r, idx) => (
+              <tr key={idx}>
+                <td>#{r.index + 1}</td>
+                <td>{r.slug || "—"}</td>
+                <td>{r.status}</td>
+                <td>
+                  {r.vehicleId && (
+                    <Link
+                      href={`/admin/vehicles/${r.vehicleId}/edit`}
+                      className="adm__btn adm__btn--ghost"
+                      style={{ padding: ".25rem .6rem", fontSize: ".82rem" }}
+                    >
+                      Edit →
+                    </Link>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         <div className="adm__form-actions">
-          <Link
-            href={`/admin/vehicles/${autohomeResult.vehicleId}/edit`}
-            className="adm__btn adm__btn--primary"
-          >
-            Edit vehicle →
-          </Link>
           <button type="button" className="adm__btn adm__btn--ghost" onClick={reset}>
             Import another
           </button>
