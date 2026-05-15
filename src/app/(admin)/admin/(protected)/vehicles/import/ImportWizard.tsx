@@ -281,13 +281,21 @@ export default function ImportWizard({
               onChange={(e) => setAutohomeUrl(e.target.value)}
             />
             <p className="adm__sub" style={{ marginTop: ".4rem", fontSize: ".8rem" }}>
-              Paste the URL of an autohome.com.cn spec page. The importer
-              fetches it, extracts powertrain specs and the feature list,
-              then shows a diff so you can opt each field in or out.
+              Paste a single-vehicle spec page URL —{" "}
+              <code>https://www.autohome.com.cn/spec/&lt;id&gt;/</code>. The
+              comparison page (<code>car.autohome.com.cn/duibi/chexing/</code>)
+              isn&apos;t supported yet; open one of the cars from the compare
+              view and copy its spec URL. Importer extracts powertrain specs
+              and the feature list, then shows a diff so you opt each field
+              in or out.
             </p>
           </div>
 
-          {error && <div className="adm__error">{error}</div>}
+          {error && (
+            <div className="adm__error" style={{ whiteSpace: "pre-line" }}>
+              {error}
+            </div>
+          )}
 
           <div className="adm__form-actions">
             <button type="submit" className="adm__btn adm__btn--primary" disabled={pending}>

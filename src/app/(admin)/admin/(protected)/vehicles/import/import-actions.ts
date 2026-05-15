@@ -643,10 +643,37 @@ export async function previewAutohomeImport(
 
   const trimmed = url.trim();
   if (!trimmed) return { error: "Paste an autohome.com.cn spec URL first." };
-  if (!/^https?:\/\/(www\.)?autohome\.com\.cn\//i.test(trimmed)) {
+  if (!/^https?:\/\/([a-z0-9-]+\.)?autohome\.com\.cn\//i.test(trimmed)) {
     return {
       error:
         "URL must be on autohome.com.cn (e.g. https://www.autohome.com.cn/spec/71023/).",
+    };
+  }
+  // Autohome's comparison page (car.autohome.com.cn/duibi/chexing/)
+  // lists multiple vehicles via `carids=A,B,C` in the URL hash. We can
+  // only scrape a single vehicle at a time, so reject this with a
+  // helpful breakdown rather than letting the scraper fall over on a
+  // page that has no single-vehicle spec data.
+  if (/\/duibi\//i.test(trimmed) || /[?#].*carids=/i.test(trimmed)) {
+    const carids = (() => {
+      const m = trimmed.match(/carids=([^&]+)/i);
+      if (!m) return [] as string[];
+      return decodeURIComponent(m[1]!)
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    })();
+    if (carids.length > 0) {
+      const urls = carids
+        .map((id) => `https://www.autohome.com.cn/spec/${id}/`)
+        .join("\n");
+      return {
+        error: `That's the comparison page (lists ${carids.length} vehicles). Paste a single spec URL instead — one of:\n${urls}`,
+      };
+    }
+    return {
+      error:
+        "Looks like a comparison/duibi page. Paste a single spec URL like https://www.autohome.com.cn/spec/71023/.",
     };
   }
 
