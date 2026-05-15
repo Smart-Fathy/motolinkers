@@ -614,7 +614,15 @@ export type AutohomeScrape = {
 };
 
 export type PreviewAutohomeResult =
-  | { ok: true; specs: AutohomeScrape[] }
+  | {
+      ok: true;
+      /** CSV-importer-shaped preview — the wizard feeds this straight into the existing mapping step. */
+      headerRow: string[];
+      variantColumns: VariantColumn[];
+      specRows: SpecRow[];
+      /** Raw scrapes, kept around so the admin can see source URLs in the wizard. */
+      scrapes: AutohomeScrape[];
+    }
   | { error: string };
 
 async function importerEnv(): Promise<{ url: string; token: string } | null> {
@@ -795,6 +803,155 @@ async function translateScrapeViaGoogle(
   return merged;
 }
 
+/**
+ * Convert N scraped autohome vehicles into the same CSV-importer
+ * preview shape — one variant column per scrape, one spec row per
+ * unique label across all scrapes. The wizard then routes through the
+ * existing mapping step, so the admin sees and maps every row instead
+ * of being limited to a hand-picked subset.
+ *
+ * Typed fields (name, brand, range, etc.) get pre-set `mappedTo` so the
+ * admin doesn't have to fix the dropdowns. Everything else from
+ * `raw_specs` defaults to `mappedTo: "specs"`, which the CSV apply path
+ * already preserves into the per-vehicle `specs` jsonb column. Feature
+ * rows arrive pre-tagged with `mappedTo: "feature"` and the autohome
+ * section name.
+ */
+function scrapesToPreview(scrapes: AutohomeScrape[]): {
+  headerRow: string[];
+  variantColumns: VariantColumn[];
+  specRows: SpecRow[];
+} {
+  const variantColumns: VariantColumn[] = scrapes.map((scrape, i) => {
+    const label = scrape.name ?? scrape.page_title ?? `Vehicle ${i + 1}`;
+    return {
+      index: i + 1, // 1-based to mirror CSV column indices
+      headerLabel: label,
+      derivedTrim: scrape.trim ?? "",
+      derivedYear: scrape.year ?? null,
+      suggestedSlug: scrape.name ? slugify(scrape.name) : "",
+    };
+  });
+
+  // ── Typed spec rows ────────────────────────────────────────────
+  // The CSV importer's mapLabel() looks at the *label string* to pick
+  // a default mappedTo. We bypass it by setting mappedTo directly on
+  // each typed row so the dropdowns are pre-filled correctly.
+  const typed: {
+    label: string;
+    mappedTo: SpecMappedTo;
+    pick: (s: AutohomeScrape) => string | number | undefined;
+  }[] = [
+    { label: "Name", mappedTo: "name", pick: (s) => s.name },
+    { label: "Brand", mappedTo: "brand", pick: (s) => s.brand },
+    { label: "Model", mappedTo: "model", pick: (s) => s.model },
+    { label: "Trim", mappedTo: "trim", pick: (s) => s.trim },
+    { label: "Year", mappedTo: "year", pick: (s) => s.year },
+    { label: "Body", mappedTo: "body", pick: (s) => s.body },
+    { label: "Range (km)", mappedTo: "range_km", pick: (s) => s.range_km },
+    { label: "Transmission", mappedTo: "transmission", pick: (s) => s.transmission },
+    { label: "Drivetrain", mappedTo: "drivetrain", pick: (s) => s.drivetrain },
+    { label: "Price (yuan)", mappedTo: "price_egp", pick: (s) => s.price_cny },
+  ];
+
+  const specRows: SpecRow[] = [];
+  let rowIndex = 1;
+
+  for (const def of typed) {
+    const values = scrapes.map((s) => {
+      const v = def.pick(s);
+      return v === undefined || v === null ? "" : String(v);
+    });
+    if (values.every((v) => v === "")) continue;
+    specRows.push({
+      rowIndex: rowIndex++,
+      label: def.label,
+      values,
+      mappedTo: def.mappedTo,
+    });
+  }
+
+  // ── Powertrain free-form rows (no typed CSV mapping exists) ────
+  // These land in the `specs` jsonb column verbatim, but the admin
+  // can re-map them to anything via the dropdown.
+  const freeform: { label: string; pick: (s: AutohomeScrape) => string | number | undefined }[] = [
+    { label: "Motor power (PS)", pick: (s) => s.motor_power_ps },
+    { label: "Motor power (kW)", pick: (s) => s.motor_power_kw },
+    { label: "Battery (kWh)", pick: (s) => s.battery_kwh },
+    { label: "Top speed (km/h)", pick: (s) => s.top_speed_kmh },
+    { label: "0–100 km/h (s)", pick: (s) => s.acceleration_0_100 },
+    { label: "Seats", pick: (s) => s.seats },
+  ];
+  for (const def of freeform) {
+    const values = scrapes.map((s) => {
+      const v = def.pick(s);
+      return v === undefined || v === null ? "" : String(v);
+    });
+    if (values.every((v) => v === "")) continue;
+    specRows.push({
+      rowIndex: rowIndex++,
+      label: def.label,
+      values,
+      mappedTo: "specs",
+    });
+  }
+
+  // ── Every other raw_specs key autohome surfaced ─────────────────
+  // Union of keys across all scrapes — preserves chassis, safety,
+  // dimensions, etc. that the typed extraction doesn't cover.
+  const seenRawKeys = new Set<string>();
+  for (const scrape of scrapes) {
+    if (!scrape.raw_specs) continue;
+    for (const key of Object.keys(scrape.raw_specs)) {
+      if (seenRawKeys.has(key)) continue;
+      seenRawKeys.add(key);
+      const values = scrapes.map((s) => s.raw_specs?.[key] ?? "");
+      if (values.every((v) => v === "")) continue;
+      specRows.push({
+        rowIndex: rowIndex++,
+        label: key,
+        values,
+        mappedTo: "specs",
+      });
+    }
+  }
+
+  // ── Feature rows ───────────────────────────────────────────────
+  // Union every feature item across all scrapes, bucketed by the
+  // section autohome put it in. Values are "●" for variants that
+  // have the feature, "" for the rest — same convention the CSV
+  // importer's feature rows use.
+  type FeatureKey = { section: string; item: string };
+  const featureKeys: FeatureKey[] = [];
+  const seenFeatures = new Set<string>();
+  for (const scrape of scrapes) {
+    if (!scrape.features) continue;
+    for (const [section, items] of Object.entries(scrape.features)) {
+      for (const item of items) {
+        const k = `${section}|${item}`;
+        if (seenFeatures.has(k)) continue;
+        seenFeatures.add(k);
+        featureKeys.push({ section, item });
+      }
+    }
+  }
+  for (const { section, item } of featureKeys) {
+    const values = scrapes.map((s) =>
+      s.features?.[section]?.includes(item) ? "●" : "",
+    );
+    specRows.push({
+      rowIndex: rowIndex++,
+      label: item,
+      values,
+      mappedTo: "feature",
+      section,
+    });
+  }
+
+  const headerRow = ["Spec", ...variantColumns.map((v) => v.headerLabel)];
+  return { headerRow, variantColumns, specRows };
+}
+
 export async function previewAutohomeImport(
   url: string,
 ): Promise<PreviewAutohomeResult> {
@@ -873,227 +1030,7 @@ export async function previewAutohomeImport(
     scraped.map((s) => translateScrapeViaGoogle(s)),
   );
 
-  return { ok: true, specs };
-}
-
-export type AutohomeDecision =
-  | { kind: "skip" }
-  | {
-      kind: "create";
-      slug: string;
-      origin: Origin;
-      type: PowerTrain;
-      acceptedFields: string[];
-    }
-  | {
-      kind: "update";
-      vehicleId: string;
-      acceptedFields: string[];
-    };
-
-export type ApplyAutohomePayload = {
-  scrapes: AutohomeScrape[];
-  /** Keyed by scrape index in `scrapes`. */
-  decisions: Record<number, AutohomeDecision>;
-};
-
-export type ApplyAutohomeResult =
-  | {
-      ok: true;
-      results: {
-        index: number;
-        slug: string;
-        status: string;
-        vehicleId?: string;
-      }[];
-    }
-  | { error: string };
-
-/**
- * Build a feature dictionary in the same shape the per-vehicle CMS row
- * expects: `{ "Section": ["Item", "Item"], ... }`. The scrape already
- * groups features by autohome's section headings; we keep that grouping
- * verbatim so the admin can rename sections after import.
- */
-function featuresForRow(
-  features: Record<string, string[]> | undefined,
-): Record<string, string[]> {
-  if (!features) return {};
-  const out: Record<string, string[]> = {};
-  for (const [section, items] of Object.entries(features)) {
-    const trimmed = section.trim() || "Features";
-    const list = items.map((s) => s.trim()).filter(Boolean);
-    if (list.length > 0) out[trimmed] = list;
-  }
-  return out;
-}
-
-/**
- * Translate a scrape + accepted-field set into a row patch. Used for
- * both insert (create) and update flows — fields the admin didn't tick
- * are simply absent from the returned object.
- */
-function patchFromScrape(
-  scrape: AutohomeScrape,
-  acceptedFields: string[],
-): Record<string, unknown> {
-  const accept = new Set(acceptedFields);
-  const patch: Record<string, unknown> = {};
-  if (accept.has("name") && scrape.name) patch.name = scrape.name;
-  if (accept.has("brand") && scrape.brand) patch.brand = scrape.brand;
-  if (accept.has("model") && scrape.model) patch.model = scrape.model;
-  if (accept.has("trim") && scrape.trim) patch.trim = scrape.trim;
-  if (accept.has("year") && scrape.year) patch.year = scrape.year;
-  if (accept.has("body") && scrape.body) {
-    const b = scrape.body.toLowerCase();
-    if ((BODIES as readonly string[]).includes(b)) patch.body = b;
-  }
-  if (accept.has("range_km") && scrape.range_km !== undefined) {
-    patch.range_km = Math.round(scrape.range_km);
-  }
-  if (accept.has("motor_power_ps") && scrape.motor_power_ps !== undefined) {
-    patch.motor_power_ps = Math.round(scrape.motor_power_ps);
-  }
-  if (accept.has("battery_kwh") && scrape.battery_kwh !== undefined) {
-    patch.battery_kwh = scrape.battery_kwh;
-  }
-  if (accept.has("top_speed_kmh") && scrape.top_speed_kmh !== undefined) {
-    patch.top_speed_kmh = Math.round(scrape.top_speed_kmh);
-  }
-  if (
-    accept.has("acceleration_0_100") &&
-    scrape.acceleration_0_100 !== undefined
-  ) {
-    patch.acceleration_0_100 = scrape.acceleration_0_100;
-  }
-  if (accept.has("drivetrain") && scrape.drivetrain) {
-    patch.drive_type = scrape.drivetrain;
-  }
-  if (accept.has("transmission") && scrape.transmission) {
-    patch.transmission = scrape.transmission;
-  }
-  if (accept.has("seats") && scrape.seats !== undefined) {
-    patch.seats = Math.round(scrape.seats);
-  }
-  if (accept.has("features") && scrape.features) {
-    patch.features = featuresForRow(scrape.features);
-  }
-  return patch;
-}
-
-export async function applyAutohomeScrape(
-  payload: ApplyAutohomePayload,
-): Promise<ApplyAutohomeResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated." };
-
-  const results: {
-    index: number;
-    slug: string;
-    status: string;
-    vehicleId?: string;
-  }[] = [];
-  const touchedSlugs = new Set<string>();
-
-  for (const [idxStr, decision] of Object.entries(payload.decisions)) {
-    const i = parseInt(idxStr, 10);
-    const scrape = payload.scrapes[i];
-    if (!scrape) continue;
-    if (decision.kind === "skip") {
-      results.push({ index: i, slug: "", status: "skipped" });
-      continue;
-    }
-
-    if (decision.kind === "create") {
-      if (!decision.slug || !/^[a-z0-9][a-z0-9-]*$/.test(decision.slug)) {
-        results.push({
-          index: i,
-          slug: decision.slug,
-          status: "error: slug must be lowercase letters, numbers, and dashes",
-        });
-        continue;
-      }
-      const patch = patchFromScrape(scrape, decision.acceptedFields);
-      const insert: Record<string, unknown> = {
-        ...patch,
-        slug: decision.slug,
-        origin: decision.origin,
-        type: decision.type,
-        // Required NOT NULL: fall back to scraped name or the slug.
-        name: patch.name ?? scrape.name ?? `Imported ${decision.slug}`,
-        is_published: false,
-        is_featured: false,
-      };
-      const { data, error } = await supabase
-        .from("vehicles")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .insert(insert as any)
-        .select("id, slug")
-        .single();
-      if (error) {
-        results.push({
-          index: i,
-          slug: decision.slug,
-          status: `error: ${error.message}`,
-        });
-      } else {
-        results.push({
-          index: i,
-          slug: data.slug,
-          vehicleId: data.id,
-          status: "created",
-        });
-        touchedSlugs.add(data.slug);
-      }
-      continue;
-    }
-
-    // kind === "update"
-    if (!decision.vehicleId) {
-      results.push({ index: i, slug: "", status: "error: pick a vehicle" });
-      continue;
-    }
-    const patch = patchFromScrape(scrape, decision.acceptedFields);
-    if (Object.keys(patch).length === 0) {
-      results.push({
-        index: i,
-        slug: "",
-        status: "skipped (no fields ticked)",
-      });
-      continue;
-    }
-    const { data, error } = await supabase
-      .from("vehicles")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .update(patch as any)
-      .eq("id", decision.vehicleId)
-      .select("id, slug")
-      .single();
-    if (error) {
-      results.push({
-        index: i,
-        slug: "",
-        status: `error: ${error.message}`,
-      });
-    } else {
-      results.push({
-        index: i,
-        slug: data.slug,
-        vehicleId: data.id,
-        status: "updated",
-      });
-      touchedSlugs.add(data.slug);
-    }
-  }
-
-  for (const slug of touchedSlugs) revalidatePath(`/vehicles/${slug}`);
-  revalidatePath("/");
-  revalidatePath("/vehicles");
-  revalidatePath("/admin/vehicles");
-
-  return { ok: true, results };
+  const { headerRow, variantColumns, specRows } = scrapesToPreview(specs);
+  return { ok: true, headerRow, variantColumns, specRows, scrapes: specs };
 }
 
